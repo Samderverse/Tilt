@@ -12,7 +12,7 @@ export const MAX_STRIP = 20;
 // ---------- Beer Mats (level up a symbol) ----------
 export const MATS = BASE_SYMBOLS.map((id) => ({
   id, name: `${SYMBOLS[id].name} Mat`, icon: SYMBOLS[id].icon,
-  desc: `Level up ${SYMBOLS[id].name}: +10 Coins and +1 Mult.`,
+  desc: `Level up ${SYMBOLS[id].name}: +5 Coins and +1 Mult.`,
 }));
 
 // ---------- Scratchcards (edit your reels) ----------

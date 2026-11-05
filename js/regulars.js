@@ -48,8 +48,8 @@ export const REGULARS = [
   },
   {
     id: 'jen', name: 'Jukebox Jen', face: '📻', rarity: 'common',
-    desc: '+2 Mult for every winning line.',
-    line: () => ({ mult: 2 }),
+    desc: '+1 Mult for every winning line.',
+    line: () => ({ mult: 1 }),
   },
   {
     id: 'barry', name: 'Big Coat Barry', face: '🧥', rarity: 'common',

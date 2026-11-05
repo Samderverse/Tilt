@@ -5,9 +5,12 @@ export const LINES = [
   { id: 'top',    name: 'Top line',    cells: [[0, 0], [0, 1], [0, 2]] },
   { id: 'middle', name: 'Middle line', cells: [[1, 0], [1, 1], [1, 2]] },
   { id: 'bottom', name: 'Bottom line', cells: [[2, 0], [2, 1], [2, 2]] },
+  { id: 'diag-down', name: 'Diagonal', cells: [[0, 0], [1, 1], [2, 2]] },
+  { id: 'diag-up', name: 'Diagonal', cells: [[2, 0], [1, 1], [0, 2]] },
 ];
 
-export const BASE_MULT = 1;
+// Every spin starts at x3, like a Balatro hand having a base Mult.
+export const BASE_MULT = 3;
 
 // Work out which lines win on a grid of strip entries.
 // ctx:
@@ -18,8 +21,9 @@ export const BASE_MULT = 1;
 //   coinFactor:  multiplier on each win's coins (boss)
 //
 // Rules:
-//   3 matching on a line -> each cell's coins added up, + symbol mult (+ level)
-//   2 matching from the left (pub-machine style) -> one symbol's coins, no mult
+//   3 matching on a line -> each cell's coins added up; line Mult = symbol mult (+ level)
+//   2 matching from the left (pub-machine style) -> 2 x symbol coins, no Mult
+//   A spin's Mult only takes its BEST line's Mult (not the sum), so extra lines add Coins.
 //   Wilds match anything. Gold cells are worth double coins.
 export function findWins(grid, ctx = {}) {
   const alias = (id) => (ctx.aliases && ctx.aliases[id]) || id;
@@ -50,7 +54,7 @@ export function findWins(grid, ctx = {}) {
       coins = cellEntries.reduce((s, e) => s + unit * (isGold(e) ? 2 : 1), 0);
       mult = sym.mult + lvl * LEVEL_MULT;
     } else {
-      coins = unit * (goldCount ? 2 : 1);
+      coins = unit * 2 * (goldCount ? 2 : 1);
       mult = 0;
     }
 

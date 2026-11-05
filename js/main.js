@@ -24,7 +24,7 @@ const el = {
   regs: $('regulars'),
   machine: $('machine'), reelsWrap: $('reels'),
   reels: [...document.querySelectorAll('.reel')],
-  paylines: [...document.querySelectorAll('.payline')],
+  paylines: [...document.querySelectorAll('.paylines line')],
   ctrls: [...document.querySelectorAll('.ctrl')],
   calc: $('calc'), coins: $('calc-coins'), mult: $('calc-mult'),
   message: $('message'), spinBtn: $('spin-btn'), seed: $('seed-line'),
@@ -109,6 +109,8 @@ function cellHTML(entry) {
   const lvl = run && run.levels[id] ? `<span class="lvl">+${run.levels[id]}</span>` : '';
   return `<div class="${cls.join(' ')}" data-sym="${id}">${inner}${lvl}</div>`;
 }
+
+const lineEl = (id) => el.paylines.find((l) => l.dataset.line === id);
 
 function cellSize() { return el.reels[0].clientHeight / ROWS; }
 function cellAt(row, col) { return el.reels[col].querySelectorAll('.cell')[row]; }
@@ -435,7 +437,7 @@ async function playResult(result) {
   if (i.boss?.darkRows) { applyDark(true); FX.flash('#fff6c8', 250); await sleep(300); }
 
   if (result.blocked.length) {
-    for (const w of result.blocked) el.paylines[w.line.cells[0][0]].classList.add('blocked');
+    for (const w of result.blocked) lineEl(w.line.id).classList.add('blocked');
     A.sfx.blocked();
     say(`${i.boss.name}: "Not tonight."`);
     await sleep(700);
@@ -464,7 +466,7 @@ async function playResult(result) {
     if (st.kind === 'line') {
       const w = st.win;
       el.paylines.forEach((p) => p.classList.remove('on'));
-      el.paylines[w.line.cells[0][0]].classList.add('on');
+      lineEl(w.line.id).classList.add('on');
       for (const [r, c] of w.cells) {
         const node = cellAt(r, c);
         node.classList.remove('dim');
@@ -497,7 +499,7 @@ async function playResult(result) {
 
   const total = result.total;
   say(`+${total}`, true);
-  const big = result.mult >= 6 || result.wins.length >= 2 || total >= i.target * 0.5;
+  const big = result.mult >= 8 || result.wins.length >= 3 || total >= i.target * 0.5;
 
   if (result.onFire) {
     el.bar.classList.add('on-fire');

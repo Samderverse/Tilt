@@ -7,7 +7,7 @@ import { runHook, aliasesFor, extrasFor } from './regulars.js';
 import { openBar } from './shop.js';
 
 export const CONFIG = {
-  spins: 5,
+  spins: 6,
   holds: 3,          // per round, each held reel uses one
   nudges: 2,         // per round
   pintsToWin: 8,
@@ -23,7 +23,7 @@ export const ROUND_KINDS = [
 ];
 
 // Base target for each Pint. Tuned by simulation (see README).
-const PINT_BASE = [60, 125, 260, 520, 1000, 1950, 3700, 7000];
+const PINT_BASE = [450, 1050, 2050, 3700, 6100, 9500, 14000, 20000];
 
 export function baseTarget(pint) {
   if (pint <= PINT_BASE.length) return PINT_BASE[pint - 1];
@@ -65,7 +65,7 @@ export function startRound(run) {
   run.score = 0;
   run.spinsLeft = (boss?.spins ?? CONFIG.spins) + ex.spins;
   run.holdsLeft = CONFIG.holds + ex.holds;
-  run.nudgesLeft = boss?.nudges === 0 ? 0 : CONFIG.nudges + ex.nudges;
+  run.nudgesLeft = boss?.nudges != null ? boss.nudges : CONFIG.nudges + ex.nudges;
   run.held = [false, false, false];
   run.lastHeld = [false, false, false];
   run.heldMask = [false, false, false];
@@ -174,9 +174,11 @@ export function compute(run, commit) {
   };
   const base = { run, info, wins: scored, heldMask: run.heldMask || [false, false, false] };
 
+  // Coins add up across lines; Mult only comes from the best line (so several lines don't snowball).
+  let lineMult = 0;
   for (const win of scored) {
     coins += win.coins;
-    mult += win.mult;
+    if (win.mult > lineMult) { mult += win.mult - lineMult; lineMult = win.mult; }
     steps.push({ kind: 'line', win, coins, mult });
     for (const { slot, effect } of runHook(regs, 'line', { ...base, win })) apply(slot, effect);
   }

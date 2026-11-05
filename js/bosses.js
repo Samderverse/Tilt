@@ -4,18 +4,18 @@
 export const BOSSES = [
   {
     id: 'bouncer', name: 'The Bouncer', face: '😠',
-    rule: 'Only the middle line gets in.',
-    mods: { lines: ['middle'] },
+    rule: 'Diagonals aren\'t getting in tonight. Straight lines only.',
+    mods: { lines: ['top', 'middle', 'bottom'] },
   },
   {
     id: 'inspector', name: 'Health Inspector', face: '🧐',
-    rule: 'Cherries are condemned. They score nothing.',
-    mods: { symbolCoins: (id, base) => (id === 'cherry' ? 0 : base) },
+    rule: 'Cherries are past their date. They score half Coins.',
+    mods: { symbolCoins: (id, base) => (id === 'cherry' ? Math.floor(base / 2) : base) },
   },
   {
     id: 'lastorders', name: 'Last Orders', face: '🕰️',
-    rule: 'Time at the bar. Only 3 spins.',
-    spins: 3,
+    rule: 'Time at the bar. Only 4 spins.',
+    spins: 4,
   },
   {
     id: 'powercut', name: 'Power Cut', face: '🔌',
@@ -39,8 +39,8 @@ export const BOSSES = [
   },
   {
     id: 'sticky', name: 'Sticky Floors', face: '🪣',
-    rule: 'Your feet are stuck. No nudges.',
-    nudges: 0,
+    rule: 'Your feet are stuck. Just 1 nudge all round.',
+    nudges: 1,
   },
 ];
 
