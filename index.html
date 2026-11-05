@@ -4,47 +4,82 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#1a0710">
+  <meta name="description" content="A chaotic pub fruit machine roguelike.">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tilt">
   <title>Tilt</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Bungee+Shade&family=Rubik:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <canvas id="fx" aria-hidden="true"></canvas>
+  <div id="flash" aria-hidden="true"></div>
+  <div class="crt" aria-hidden="true"></div>
+
   <main id="app">
-    <!-- Title screen -->
+    <!-- Title -->
     <section id="title-screen" class="screen active">
       <h1 class="logo">TILT</h1>
       <p class="tagline">The machine always wins. Probably.</p>
       <button id="start-btn" class="big-btn">Tap to Play</button>
+      <button id="new-run-btn" class="link-btn hidden">Start a new run</button>
       <p class="best" id="best-line"></p>
+      <p class="sound-hint">🔊 Best with sound on</p>
     </section>
 
-    <!-- Game screen -->
-    <section id="game-screen" class="screen">
-      <header class="hud">
-        <div class="hud-box">
-          <span class="hud-label">Round</span>
-          <span class="hud-value" id="hud-round">1</span>
+    <!-- Game -->
+    <section id="game-screen" class="screen" data-phase="ready">
+      <div class="topbar">
+        <button class="icon-btn" id="settings-btn" aria-label="Settings">⚙︎</button>
+        <div class="round-label">
+          <span id="pint-label">Pint 1</span>
+          <span class="kind" id="kind-label">Half Pint</span>
         </div>
+        <div class="money" id="money">£4</div>
+      </div>
+
+      <div class="hud">
         <div class="hud-box target">
-          <span class="hud-label">Target</span>
-          <span class="hud-value" id="hud-target">40</span>
+          <span class="hud-label" id="target-label">Target</span>
+          <span class="hud-value" id="hud-target">55</span>
         </div>
         <div class="hud-box">
           <span class="hud-label">Spins</span>
           <span class="hud-value" id="hud-spins">5</span>
         </div>
-      </header>
-
-      <div class="score-bar">
-        <div class="score-fill" id="score-fill"></div>
-        <span class="score-text"><span id="hud-score">0</span> / <span id="hud-target-2">40</span></span>
+        <div class="hud-box small">
+          <span class="hud-label">Holds</span>
+          <span class="hud-value" id="hud-holds">3</span>
+        </div>
+        <div class="hud-box small">
+          <span class="hud-label">Nudges</span>
+          <span class="hud-value" id="hud-nudges">2</span>
+        </div>
       </div>
 
-      <div class="machine">
+      <button class="boss-strip hidden" id="boss-strip">
+        <span class="boss-face" id="boss-strip-face">😠</span>
+        <span class="boss-text">
+          <strong id="boss-strip-name">The Bouncer</strong>
+          <span id="boss-strip-rule">Only the middle line gets in.</span>
+        </span>
+      </button>
+
+      <div class="score-bar" id="score-bar">
+        <div class="score-fill" id="score-fill"></div>
+        <div class="flames" aria-hidden="true"></div>
+        <span class="score-text" id="score-text">0 / 55</span>
+      </div>
+
+      <div class="machine" id="machine">
         <div class="lights" aria-hidden="true"></div>
         <div class="reels" id="reels">
           <div class="reel" data-reel="0"><div class="strip"></div></div>
@@ -53,7 +88,33 @@
           <div class="payline" data-row="0"></div>
           <div class="payline" data-row="1"></div>
           <div class="payline" data-row="2"></div>
+          <div class="stamp" id="stamp"></div>
         </div>
+
+        <div class="controls">
+          <div class="ctrl" data-reel="0">
+            <button class="hold-btn">HOLD</button>
+            <div class="nudge-pair">
+              <button class="nudge-btn" data-dir="-1" aria-label="Nudge up">▲</button>
+              <button class="nudge-btn" data-dir="1" aria-label="Nudge down">▼</button>
+            </div>
+          </div>
+          <div class="ctrl" data-reel="1">
+            <button class="hold-btn">HOLD</button>
+            <div class="nudge-pair">
+              <button class="nudge-btn" data-dir="-1" aria-label="Nudge up">▲</button>
+              <button class="nudge-btn" data-dir="1" aria-label="Nudge down">▼</button>
+            </div>
+          </div>
+          <div class="ctrl" data-reel="2">
+            <button class="hold-btn">HOLD</button>
+            <div class="nudge-pair">
+              <button class="nudge-btn" data-dir="-1" aria-label="Nudge up">▲</button>
+              <button class="nudge-btn" data-dir="1" aria-label="Nudge down">▼</button>
+            </div>
+          </div>
+        </div>
+
         <div class="calc" id="calc">
           <span class="chips" id="calc-coins">0</span>
           <span class="times">×</span>
@@ -66,12 +127,34 @@
       <p class="seed" id="seed-line"></p>
     </section>
 
-    <!-- Overlay for round clear / game over -->
+    <!-- General overlay (round intro, clear, game over) -->
     <div id="overlay" class="overlay hidden">
-      <div class="panel">
+      <div class="panel" id="panel">
+        <div class="panel-face hidden" id="overlay-face"></div>
+        <p class="panel-kicker" id="overlay-kicker"></p>
         <h2 id="overlay-title"></h2>
-        <p id="overlay-body"></p>
+        <div id="overlay-body"></div>
         <button id="overlay-btn" class="big-btn"></button>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div id="settings" class="overlay hidden">
+      <div class="panel settings-panel">
+        <h2>Settings</h2>
+        <label class="slider"><span>Music</span><input type="range" min="0" max="1" step="0.05" id="vol-music"></label>
+        <label class="slider"><span>Pub ambience</span><input type="range" min="0" max="1" step="0.05" id="vol-ambience"></label>
+        <label class="slider"><span>Sound effects</span><input type="range" min="0" max="1" step="0.05" id="vol-sfx"></label>
+        <label class="toggle"><span>Reduced effects</span><input type="checkbox" id="opt-reduced"></label>
+        <label class="toggle"><span>Vibration</span><input type="checkbox" id="opt-vibration"></label>
+        <div class="settings-actions">
+          <button class="link-btn danger" id="abandon-btn">Abandon run</button>
+          <button class="big-btn" id="settings-close">Done</button>
+        </div>
+        <details class="credits">
+          <summary>Credits</summary>
+          <ul id="credits-list"></ul>
+        </details>
       </div>
     </div>
   </main>

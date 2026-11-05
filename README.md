@@ -1,32 +1,44 @@
 # Tilt
 
-A chaotic pub fruit machine roguelike. Phase 1: the slot core.
+A chaotic pub fruit machine roguelike. Spin, hold, nudge and survive the Landlords.
 
-## Play
-Spin the reels, hit the round target within 5 spins, and the target climbs each round.
+## How it plays
+- Each **Pint** is three rounds: Half Pint, Full Pint, then a **Landlord** (boss) with a nasty rule.
+- Score the target within your spins. Score = Coins × Mult.
+  - 3 matching on a line: 3 × symbol coins, plus the symbol's mult
+  - 2 matching from the left: 1 × symbol coins
+- **Hold** (3 per round): keep reels still on the next spin. A reel can't be held twice running.
+- **Nudge** (2 per round): after a spin, move a reel up or down one symbol, then **Collect**.
+- Earn £ each round: round reward + £1 per spare spin + interest (£1 per £5 held, max £5).
+- Beat Pint 8's Landlord to win the run.
 
-- 3 matching on a line: 3 × symbol coins, plus the symbol's mult
-- 2 matching from the left: 1 × symbol coins
-- Score = Coins × Mult
+## Landlords
+The Bouncer, Health Inspector, Last Orders, Power Cut, The Taxman, Drunk Uncle, The Quiz Master, Sticky Floors.
 
-## Testing tips
-- `?seed=ABC123` replays an exact run (the seed shows under the SPIN button)
-- Space bar spins on desktop
-- Runs save automatically, so closing the tab mid-run is fine
+## Testing shortcuts
+- `?seed=ABC123` replays an exact run (seed shown under the SPIN button)
+- `?round=3&boss=uncle` jumps straight to a Landlord
+  (ids: bouncer, inspector, lastorders, powercut, taxman, uncle, quiz, sticky)
+- `?money=50` starts with extra cash
+- Desktop keys: Space spins/collects, 1–3 hold, Q/A W/S E/D nudge reels up/down
+
+## Audio
+- `audio/main.mp3`, `audio/boss.mp3`: levelled to the same loudness, trimmed for looping
+- `audio/ambience.mp3`: crossfaded into a seamless 18s loop, set well under the music
+- Volumes are in Settings (⚙). Add track credits in `js/settings.js`.
 
 ## Files
-- `js/rng.js`: seeded random numbers
-- `js/symbols.js`: symbol values and starting reel strips
-- `js/reels.js`: reel strips and spinning
+- `js/game.js`: rules, rounds, money (no DOM, so it can be simulated)
+- `js/bosses.js`: Landlord definitions
 - `js/scoring.js`: win lines and scoring
-- `js/audio.js`: sound effects and vibration
-- `js/main.js`: game flow and animation
+- `js/reels.js`, `js/symbols.js`, `js/rng.js`: reels, symbols, seeded randomness
+- `js/main.js`: UI flow and animation
+- `js/audio.js`: music/ambience/sfx mixer
+- `js/fx.js`: particles, flashes, shakes, glitches
+- `js/settings.js`: settings and credits
+- `icons/`, `manifest.json`: app icon and home-screen install
 
 ## Roadmap
-1. Slot core ✅
-2. Holds and nudges
-3. Regulars (modifiers) and the hook engine
-4. The Bar (shop)
-5. Landlord's Rules (bosses) and the feature board
-6. Juice
-7. Balance and content
+- Drop A: holds, nudges, Pints, Landlords, effects, audio, icon ✅
+- Drop B: The Bar (shop), Regulars, Beer Mats, Scratchcards, crisp packets
+- Drop C: more polish, run summary extras, balance pass
