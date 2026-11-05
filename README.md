@@ -4,11 +4,11 @@ A chaotic pub fruit machine roguelike by Samderverse. Spin, hold, nudge and surv
 
 ## How it plays
 - Each **Pint** is three rounds: Half Pint, Full Pint, then a **Landlord** (boss) with a nasty rule.
-- Score the target within 6 spins. Score = Coins × Mult.
+- Score the target within 6 spins. Score = Coins × Multi.
   - 5 win lines: top, middle, bottom and both diagonals
-  - 3 matching on a line: each symbol's Coins added up, and the line's Mult is the symbol's Mult
+  - 3 matching on a line: each symbol's Coins added up, and the line's Multi is the symbol's Multi
   - 2 matching from the left: 2 × symbol Coins
-  - Every spin starts at ×3 Mult. Only the best line's Mult counts (extra lines add Coins), then Regulars add their bonuses
+  - Every spin starts at ×3 Multi. Only the best line's Multi counts (extra lines add Coins), then Regulars add their bonuses
 - **Hold** (3 per round): keep reels still on the next spin. A reel can't be held twice running.
 - **Nudge** (2 per round): after a spin, move a reel up or down one symbol, then **Collect**.
 - Earn £ each round: round reward + £1 per spare spin + interest (£1 per £5 held, max £5).
@@ -21,7 +21,7 @@ A chaotic pub fruit machine roguelike by Samderverse. Spin, hold, nudge and surv
 ## The Bar (between rounds)
 - **Regulars** (up to 5): Tilt's jokers. They trigger left to right, so order matters. Tap one to sell or move it.
   28 so far, across Common, Uncommon, Rare and Legendary (Legendaries only come in Prawn Cocktail crisps).
-- **Beer Mats**: level up a symbol (+5 Coins, +1 Mult per level).
+- **Beer Mats**: level up a symbol (+5 Coins, +1 Multi per level).
 - **Scratchcards**: edit your reels. Gold Leaf (double Coins), Photocopier, Bin Bag, Wild Card, Lucky Dip.
 - **Crisps**: Ready Salted (pick 1 of 3 Beer Mats), Salt & Vinegar (1 of 3 Scratchcards), Prawn Cocktail (1 of 2 Regulars).
 - **Restock** rerolls the stock: £1, going up £1 each time per visit.
@@ -89,5 +89,5 @@ The Bouncer, Health Inspector, Last Orders, Power Cut, The Taxman, Drunk Uncle, 
 ## Roadmap
 - Drop A: holds, nudges, Pints, Landlords, effects, audio, icon ✅
 - Drop B: The Bar (shop), Regulars, Beer Mats, Scratchcards, crisp packets ✅
-- Rebalance: 5 lines, ×3 base Mult, best-line Mult, 6 spins ✅
+- Rebalance: 5 lines, ×3 base Multi, best-line Multi, 6 spins ✅
 - Drop C: art & identity pass, How to Play, tutorial ✅

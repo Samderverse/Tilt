@@ -1,4 +1,4 @@
-// Symbol definitions. Coins = base chips, mult = the line's Mult when the symbol wins a line of 3.
+// Symbol definitions. Coins = base chips, mult = the line's Multi when the symbol wins a line of 3.
 // Reel strip entries are strings: 'cherry', or 'cherry:gold' for a gold-leafed one.
 
 export const SYMBOLS = {

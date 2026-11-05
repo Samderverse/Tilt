@@ -1,6 +1,7 @@
 import { randomSeed } from './rng.js';
 import { SYMBOLS, baseId, isGold } from './symbols.js';
 import { visibleOnReel, ROWS } from './reels.js';
+import { BASE_MULT } from './scoring.js';
 import * as G from './game.js';
 import * as S from './shop.js';
 import { REG_BY_ID, RARITY, MAX_REGULARS, sellValue, describeEffect } from './regulars.js';
@@ -238,26 +239,34 @@ function renderAll() {
   fitLayout();
 }
 
-// Shrink the reels until the whole game screen fits the phone, so nothing ever scrolls.
+// Make the whole game screen fit the phone exactly, so nothing ever scrolls.
+// Order: shrink the reels a bit, then compact the extras, then shrink the reels further.
 function fitLayout() {
+  setAppHeight();
   if (!el.game.classList.contains('active')) return;
   const root = document.documentElement;
-  let cell = Math.min(92, Math.floor(innerWidth * 0.2));
-  root.style.setProperty('--cell', cell + 'px');
-  el.game.scrollTop = 0;
-  // The SPIN button is pinned to the bottom, so a screen that fits reads as exactly full;
-  // only a true overflow (scrollHeight > clientHeight) means it's too tall.
-  const over = () => el.game.scrollHeight > el.game.clientHeight;
-  while (over() && cell > 58) {
-    cell -= 3;
-    root.style.setProperty('--cell', cell + 'px');
-  }
-  // One extra step of headroom so a wrapping hint line can't tip it over later.
-  if (cell < Math.min(92, Math.floor(innerWidth * 0.2)) && cell > 58) {
-    cell -= 3;
-    root.style.setProperty('--cell', cell + 'px');
-  }
+  const g = el.game;
+  const over = () => g.scrollHeight > g.clientHeight;
+  const maxCell = Math.min(92, Math.floor(innerWidth * 0.2));
+  const setCell = (c) => root.style.setProperty('--cell', c + 'px');
+  g.classList.remove('compact', 'tight');
+  g.scrollTop = 0;
+  let cell = maxCell;
+  setCell(cell);
+  const shrinkTo = (min) => { while (over() && cell > min) { cell -= 3; setCell(cell); } };
+  shrinkTo(70);
+  if (over()) { g.classList.add('compact'); cell = maxCell; setCell(cell); shrinkTo(62); }
+  if (over()) { g.classList.add('tight'); shrinkTo(46); }
+  // A little headroom so a wrapping hint or score pop can't tip it over later.
+  if (cell < maxCell && cell > 46) setCell(cell - 3);
   if (run) renderReelsStatic();
+}
+
+// Size the app to the screen you can actually see (Safari's bars come and go).
+function setAppHeight() {
+  const vv = window.visualViewport;
+  const h = Math.round(Math.min(innerHeight, vv ? vv.height : innerHeight));
+  document.documentElement.style.setProperty('--app-h', h + 'px');
 }
 
 function showScreen(name) {
@@ -401,7 +410,7 @@ async function doSpin() {
   if (!s) return;
   busy = true;
   say('');
-  setCalc(0, 1);
+  setCalc(0, BASE_MULT);
   renderHUD();
   renderControls();
   A.sfx.spin();
@@ -415,7 +424,7 @@ async function doSpin() {
     renderControls();
     showPreview();
     await tip('nudge', document.querySelector('.controls'), `The reels have landed. Use <b>▲ ▼</b> to <b>nudge</b> a reel one step and line up matches. You get a couple per round.`, { place: 'below' });
-    await tip('preview', el.calc, `This shows what the spin is worth right now: <b>Coins × Mult</b>. It updates as you nudge.`);
+    await tip('preview', el.calc, `This shows what the spin is worth right now: <b>Coins × Multi</b>. It updates as you nudge.`);
     await tip('collect', el.spinBtn, `Happy with it? Tap <b>COLLECT</b> to bank the score.`);
   } else {
     await doCollect();
@@ -472,7 +481,7 @@ function popRegular(slot, effect) {
 
 async function playResult(result) {
   const i = info();
-  setCalc(0, 1);
+  setCalc(0, BASE_MULT);
   if (i.boss?.darkRows) { applyDark(true); FX.flash('#fff6c8', 250); await sleep(300); }
 
   if (result.blocked.length) {
@@ -492,7 +501,7 @@ async function playResult(result) {
   }
 
   if (!result.wins.length) {
-    // Regulars can still react to a losing spin (Quentin banks Mult).
+    // Regulars can still react to a losing spin (Quentin banks Multi).
     for (const st of result.steps) { popRegular(st.slot, st.effect); A.sfx.tick(); await sleep(450); }
     if (!result.voided) { A.sfx.blank(); say(pick(BLANK_LINES)); }
     return;
@@ -1007,7 +1016,7 @@ function leaveBar() {
   A.setMuffled(false);
   applyTheme();
   clearHighlights();
-  setCalc(0, 1);
+  setCalc(0, BASE_MULT);
   roundIntro();
 }
 
@@ -1017,7 +1026,7 @@ async function startRun(r, resumed = false) {
   busy = false;
   applyTheme();
   clearHighlights();
-  setCalc(0, 1);
+  setCalc(0, BASE_MULT);
   el.bar.classList.remove('on-fire');
   save();
   if (!resumed) return roundIntro();
@@ -1210,7 +1219,9 @@ function boot() {
   window.addEventListener('resize', () => { window.scrollTo(0, 0); if (run && !busy) fitLayout(); });
   // Belt and braces: if anything ever scrolls the page itself, put it straight back.
   window.addEventListener('scroll', () => { if (window.scrollY || window.scrollX) window.scrollTo(0, 0); });
-  if (window.visualViewport) window.visualViewport.addEventListener('resize', () => window.scrollTo(0, 0));
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', () => { window.scrollTo(0, 0); if (run && !busy) fitLayout(); else setAppHeight(); });
+  window.addEventListener('orientationchange', () => setTimeout(() => { if (run && !busy) fitLayout(); }, 300));
+  setAppHeight();
 
   // ?taps=1 shows where each tap lands and which button it hit (for testing on a phone).
   if (params.has('taps')) {

@@ -1042,3 +1042,65 @@ body.in-bar .crt { background: radial-gradient(ellipse at center, transparent 50
 .nudge-pair { gap: 3px; }
 .hold-btn { padding: 0 2px; min-width: 0; font-size: 12px; }
 .message, .message.big { min-height: 0; height: 2.6rem; overflow: hidden; }
+
+/* Power Cut: nothing shows through the dark, including gold and wilds */
+.cell.dark { background: #050102 !important; box-shadow: none !important; }
+.cell.dark.gold::before, .cell.dark::before {
+  content: ''; position: absolute; inset: 0; z-index: 3; animation: none;
+  background: radial-gradient(circle at 50% 50%, #1b0509, #050102);
+  background-size: auto; box-shadow: inset 0 0 0 1px rgba(255,60,40,.08);
+}
+.cell.dark .lvl { display: none; }
+
+/* The app is exactly the visible screen, measured live (browser bars included) */
+#app { height: var(--app-h, 100%); }
+
+/* Progressive compaction when a screen is short (applied by fitLayout) */
+#game-screen.compact .topbar { margin-bottom: 2px; }
+#game-screen.compact .icon-btn { min-width: 36px; min-height: 36px; width: 36px; height: 36px; font-size: 16px; }
+#game-screen.compact #pint-label { font-size: 15px; }
+#game-screen.compact .hud-box { padding: 1px 2px; }
+#game-screen.compact .hud-value { font-size: 17px; }
+#game-screen.compact .hud-label { font-size: 9px; }
+#game-screen.compact .boss-strip { margin-top: 4px; padding: 3px 8px; }
+#game-screen.compact .boss-strip .boss-face { font-size: 20px; }
+#game-screen.compact #boss-strip-rule { display: none; }
+#game-screen.compact .score-bar { height: 24px; margin: 5px 0 6px; }
+#game-screen.compact .reg-card { height: 42px; }
+#game-screen.compact .reg-card .nm { display: none; }
+#game-screen.compact .regulars { margin-bottom: 6px; }
+#game-screen.compact .machine { padding: 10px 8px 6px; }
+#game-screen.compact .ctrl { height: 38px; }
+#game-screen.compact .controls { margin-top: 5px; }
+#game-screen.compact .calc { margin-top: 5px; font-size: 19px; }
+#game-screen.compact .calc .chips, #game-screen.compact .calc .mult { padding: 3px 10px; min-width: 70px; }
+#game-screen.compact .message, #game-screen.compact .message.big { height: 2.4rem; font-size: 13px; }
+#game-screen.compact .message.big { font-size: 19px; }
+#game-screen.compact .spin-btn { height: 54px; font-size: 26px; }
+#game-screen.compact .seed { display: none; }
+/* Tightest: smaller still */
+#game-screen.tight .hud-label { display: none; }
+#game-screen.tight .hud-value { font-size: 16px; line-height: 1.2; }
+#game-screen.tight .score-bar { height: 22px; }
+#game-screen.tight .score-text { font-size: 12px; }
+#game-screen.tight .reg-card { height: 36px; }
+#game-screen.tight .reg-card .rc-portrait { width: 24px; height: 24px; }
+#game-screen.tight .reg-card .rc-portrait .face { font-size: 15px; }
+#game-screen.tight .spin-btn { height: 48px; font-size: 22px; }
+#game-screen.tight .calc { font-size: 17px; }
+#game-screen.tight .message, #game-screen.tight .message.big { height: 2.1rem; font-size: 12px; }
+#game-screen.tight .hud-label { display: block; font-size: 8px; letter-spacing: .06em; line-height: 1.1; }
+#game-screen.tight .hud-value { font-size: 15px; line-height: 1.1; }
+
+/* Gold Leaf perk: gilded symbols glow through a Power Cut */
+.cell.dark.gold {
+  background: radial-gradient(circle, #fff3b0 0%, #ffd34d 55%, #e0a316 100%) !important;
+  box-shadow: inset 0 0 0 2px #c58a0d, 0 0 16px 2px rgba(255,200,60,.75) !important;
+  z-index: 2; animation: gold-glow 1.8s ease-in-out infinite;
+}
+.cell.dark.gold::before {
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,.65) 45%, transparent 60%);
+  background-size: 250% 100%; animation: shine 2.6s ease-in-out infinite; z-index: auto; box-shadow: none;
+}
+.cell.dark.gold .lvl { display: block; }
+@keyframes gold-glow { 50% { filter: brightness(1.15); } }

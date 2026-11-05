@@ -174,7 +174,7 @@ export function compute(run, commit) {
   };
   const base = { run, info, wins: scored, heldMask: run.heldMask || [false, false, false] };
 
-  // Coins add up across lines; Mult only comes from the best line (so several lines don't snowball).
+  // Coins add up across lines; Multi only comes from the best line (so several lines don't snowball).
   let lineMult = 0;
   for (const win of scored) {
     coins += win.coins;

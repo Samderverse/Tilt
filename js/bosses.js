@@ -19,7 +19,7 @@ export const BOSSES = [
   },
   {
     id: 'powercut', name: 'Power Cut', face: '🔌',
-    rule: 'Only the middle row is lit. Good luck.',
+    rule: 'Only the middle row is lit. Only gold shines in the dark.',
     darkRows: [0, 2],
   },
   {

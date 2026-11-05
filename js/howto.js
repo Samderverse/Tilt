@@ -22,9 +22,9 @@ export const PAGES = [
     body: 'There are <b>5 win lines</b>: three across and two diagonals. <b>3 in a row</b> pays big. <b>2 matching from the left</b> pays a little.',
   },
   {
-    title: 'Coins × Mult',
+    title: 'Coins × Multi',
     art: `<div class="ht-calc"><span class="chips">60</span><span class="times">×</span><span class="mult">4</span><span class="eq">= 240</span></div>`,
-    body: 'Every spin scores <b>Coins × Mult</b>. Mult starts at <b>×3</b>. Your <b>best line</b> sets the bonus Mult, and every other winning line adds its Coins.',
+    body: 'Every spin scores <b>Coins × Multi</b>. Multi starts at <b>×3</b>. Your <b>best line</b> sets the bonus Multi, and every other winning line adds its Coins.',
   },
   {
     title: 'Hold & Nudge',
@@ -39,7 +39,7 @@ export const PAGES = [
   {
     title: 'The Bar',
     art: `<div class="ht-shop">${regularCard('kev', 'sm')}${beerMat('cherry')}${scratchCard('gold')}${crispPacket('prawn')}</div>`,
-    body: 'Between rounds, spend your winnings. <b>Regulars</b> boost every spin (left to right, so order matters). <b>Beer Mats</b> level up symbols. <b>Scratchcards</b> edit your reels. <b>Crisps</b> let you pick 1 of a few.',
+    body: 'Between rounds, spend your winnings. <b>Regulars</b> boost every spin (left to right, so order matters). <b>Beer Mats</b> level up symbols. <b>Scratchcards</b> edit your reels (gold symbols even glow in a power cut). <b>Crisps</b> let you pick 1 of a few.',
   },
   {
     title: 'Money talks',

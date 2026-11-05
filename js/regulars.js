@@ -28,12 +28,12 @@ export const REGULARS = [
   },
   {
     id: 'lil', name: 'Lemon Lil', face: '👵', rarity: 'common',
-    desc: '+4 Mult when Lemons win a line.',
+    desc: '+4 Multi when Lemons win a line.',
     line: (ctx) => sym(ctx, 'lemon') && { mult: 4 },
   },
   {
     id: 'gary', name: 'Grapevine Gary', face: '🗣️', rarity: 'common',
-    desc: '+20 Coins and +3 Mult when Grapes win a line.',
+    desc: '+20 Coins and +3 Multi when Grapes win a line.',
     line: (ctx) => sym(ctx, 'grapes') && { coins: 20, mult: 3 },
   },
   {
@@ -43,12 +43,12 @@ export const REGULARS = [
   },
   {
     id: 'kev', name: 'Karaoke Kev', face: '🎤', rarity: 'common',
-    desc: '+5 Mult when Bells win a line.',
+    desc: '+5 Multi when Bells win a line.',
     line: (ctx) => sym(ctx, 'bell') && { mult: 5 },
   },
   {
     id: 'jen', name: 'Jukebox Jen', face: '📻', rarity: 'common',
-    desc: '+1 Mult for every winning line.',
+    desc: '+1 Multi for every winning line.',
     line: () => ({ mult: 1 }),
   },
   {
@@ -58,7 +58,7 @@ export const REGULARS = [
   },
   {
     id: 'reg', name: 'Old Reg', face: '👴', rarity: 'common',
-    desc: '+4 Mult on any spin that wins.',
+    desc: '+4 Multi on any spin that wins.',
     end: (ctx) => ctx.wins.length > 0 && { mult: 4 },
   },
   {
@@ -68,17 +68,17 @@ export const REGULARS = [
   },
   {
     id: 'tony', name: 'Two-Pint Tony', face: '🍻', rarity: 'common',
-    desc: 'Lines of 2 also add their symbol\'s Mult, +1.',
+    desc: 'Lines of 2 also add their symbol\'s Multi, +1.',
     line: (ctx) => ctx.win.count === 2 && { mult: ctx.win.symbol.mult + 1 },
   },
   {
     id: 'carol', name: 'Crossword Carol', face: '✏️', rarity: 'common',
-    desc: '+8 Mult if your last spin of the round wins.',
+    desc: '+8 Multi if your last spin of the round wins.',
     end: (ctx) => ctx.wins.length > 0 && ctx.run.spinsLeft === 0 && { mult: 8 },
   },
   {
     id: 'brenda', name: 'Early Bird Brenda', face: '🐦', rarity: 'common',
-    desc: '×1.5 Mult if your first spin of the round wins.',
+    desc: '×1.5 Multi if your first spin of the round wins.',
     end: (ctx) => ctx.wins.length > 0 && ctx.run.spinsThisRound === 1 && { xmult: 1.5 },
   },
   {
@@ -100,21 +100,21 @@ export const REGULARS = [
   },
   {
     id: 'quentin', name: 'Quiz Machine Quentin', face: '🤓', rarity: 'uncommon',
-    desc: 'Each losing spin banks +5 Mult. Your next win cashes it all in.',
+    desc: 'Each losing spin banks +5 Multi. Your next win cashes it all in.',
     end: (ctx) => {
       if (!ctx.wins.length) { ctx.state.bank = (ctx.state.bank || 0) + 5; return { text: `Banked +${ctx.state.bank}` }; }
       const b = ctx.state.bank || 0;
       ctx.state.bank = 0;
       return b ? { mult: b } : null;
     },
-    status: (s) => `Banked: +${s.bank || 0} Mult`,
+    status: (s) => `Banked: +${s.bank || 0} Multi`,
   },
   {
     id: 'bore', name: 'The Pub Bore', face: '😴', rarity: 'uncommon',
-    desc: 'Gains +1 Mult every time you nudge. Adds it to every winning spin.',
+    desc: 'Gains +1 Multi every time you nudge. Adds it to every winning spin.',
     nudge: (ctx) => { ctx.state.m = (ctx.state.m || 0) + 1; },
     end: (ctx) => ctx.wins.length > 0 && ctx.state.m > 0 && { mult: ctx.state.m },
-    status: (s) => `Currently +${s.m || 0} Mult`,
+    status: (s) => `Currently +${s.m || 0} Multi`,
   },
   {
     id: 'nan', name: 'Nan with the Tenpences', face: '👛', rarity: 'uncommon',
@@ -123,13 +123,13 @@ export const REGULARS = [
   },
   {
     id: 'eddie', name: 'Steady Eddie', face: '🧘', rarity: 'uncommon',
-    desc: '+1 Hold every round. +6 Mult when a held reel is part of a win.',
+    desc: '+1 Hold every round. +6 Multi when a held reel is part of a win.',
     extra: { holds: 1 },
     line: (ctx) => ctx.win.cells.some(([, c]) => ctx.heldMask[c]) && { mult: 6 },
   },
   {
     id: 'sue', name: 'Fruit Salad Sue', face: '🥗', rarity: 'uncommon',
-    desc: '×2 Mult if two different symbols win on the same spin.',
+    desc: '×2 Multi if two different symbols win on the same spin.',
     end: (ctx) => new Set(ctx.wins.map((w) => w.symbol.id)).size >= 2 && { xmult: 2 },
   },
   {
@@ -140,12 +140,12 @@ export const REGULARS = [
   },
   {
     id: 'willy', name: 'Wild Willy', face: '🤠', rarity: 'uncommon',
-    desc: '+6 Mult for each Wild in a winning line.',
+    desc: '+6 Multi for each Wild in a winning line.',
     line: (ctx) => ctx.win.wildCount > 0 && { mult: 6 * ctx.win.wildCount },
   },
   {
     id: 'mo', name: 'Mat Collector Mo', face: '🍺', rarity: 'uncommon',
-    desc: '+1 Mult on winning spins for every Beer Mat level you own.',
+    desc: '+1 Multi on winning spins for every Beer Mat level you own.',
     end: (ctx) => {
       const lv = Object.values(ctx.run.levels).reduce((a, b) => a + b, 0);
       return ctx.wins.length > 0 && lv > 0 && { mult: lv };
@@ -155,7 +155,7 @@ export const REGULARS = [
   // ---------- Rare ----------
   {
     id: 'darts', name: 'Darts Champion', face: '🎯', rarity: 'rare',
-    desc: '×2 Mult when two or more lines win.',
+    desc: '×2 Multi when two or more lines win.',
     end: (ctx) => ctx.wins.length >= 2 && { xmult: 2 },
   },
   {
@@ -165,19 +165,19 @@ export const REGULARS = [
   },
   {
     id: 'lucy', name: 'Lucky Lucy', face: '🍀', rarity: 'rare',
-    desc: '×3 Mult when Sevens win a line.',
+    desc: '×3 Multi when Sevens win a line.',
     line: (ctx) => sym(ctx, 'seven') && { xmult: 3 },
   },
   {
     id: 'glenda', name: 'Gold Digger Glenda', face: '💍', rarity: 'rare',
-    desc: '×1.5 Mult for each Gold symbol in a winning line.',
+    desc: '×1.5 Multi for each Gold symbol in a winning line.',
     line: (ctx) => ctx.win.goldCount > 0 && { xmult: Math.pow(1.5, ctx.win.goldCount) },
   },
 
   // ---------- Legendary (crisp packets only) ----------
   {
     id: 'guvnor', name: 'The Guv\'nor', face: '👑', rarity: 'legendary',
-    desc: '×1.5 Mult on winning spins, +×0.5 for every Landlord beaten while he\'s here.',
+    desc: '×1.5 Multi on winning spins, +×0.5 for every Landlord beaten while he\'s here.',
     end: (ctx) => ctx.wins.length > 0 && { xmult: 1.5 + 0.5 * (ctx.state.b || 0) },
     roundEnd: (ctx) => { if (ctx.wasBoss) { ctx.state.b = (ctx.state.b || 0) + 1; return { text: 'Stronger' }; } return null; },
     status: (s) => `Currently ×${(1.5 + 0.5 * (s.b || 0)).toFixed(1)}`,
@@ -242,8 +242,8 @@ export function describeEffect(e) {
   if (e.text) return e.text;
   const parts = [];
   if (e.coins) parts.push(`+${e.coins}`);
-  if (e.mult) parts.push(`+${e.mult} Mult`);
-  if (e.xmult) parts.push(`×${+e.xmult.toFixed(2)} Mult`);
+  if (e.mult) parts.push(`+${e.mult} Multi`);
+  if (e.xmult) parts.push(`×${+e.xmult.toFixed(2)} Multi`);
   if (e.money) parts.push(`+£${e.money}`);
   return parts.join(' ');
 }

@@ -12,12 +12,12 @@ export const MAX_STRIP = 20;
 // ---------- Beer Mats (level up a symbol) ----------
 export const MATS = BASE_SYMBOLS.map((id) => ({
   id, name: `${SYMBOLS[id].name} Mat`, icon: SYMBOLS[id].icon,
-  desc: `Level up ${SYMBOLS[id].name}: +5 Coins and +1 Mult.`,
+  desc: `Level up ${SYMBOLS[id].name}: +5 Coins and +1 Multi.`,
 }));
 
 // ---------- Scratchcards (edit your reels) ----------
 export const SCRATCHCARDS = [
-  { id: 'gold', name: 'Gold Leaf', icon: '✨', desc: 'Gild a symbol on a reel. Gold symbols score double Coins.', target: true },
+  { id: 'gold', name: 'Gold Leaf', icon: '✨', desc: 'Gild a symbol on a reel. Gold symbols score double Coins, and glow through a Power Cut when everything else goes dark.', target: true },
   { id: 'copy', name: 'Photocopier', icon: '📠', desc: 'Copy a symbol on a reel, so it turns up more often.', target: true },
   { id: 'bin', name: 'Bin Bag', icon: '🗑️', desc: 'Throw a symbol off a reel to thin out the junk.', target: true },
   { id: 'wild', name: 'Wild Card', icon: '⭐', desc: 'Turn a symbol on a reel into a Wild. Wilds match anything.', target: true },
