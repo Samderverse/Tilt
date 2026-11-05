@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#1a0710">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Tilt</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Bungee+Shade&family=Rubik:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="app">
+    <!-- Title screen -->
+    <section id="title-screen" class="screen active">
+      <h1 class="logo">TILT</h1>
+      <p class="tagline">The machine always wins. Probably.</p>
+      <button id="start-btn" class="big-btn">Tap to Play</button>
+      <p class="best" id="best-line"></p>
+    </section>
+
+    <!-- Game screen -->
+    <section id="game-screen" class="screen">
+      <header class="hud">
+        <div class="hud-box">
+          <span class="hud-label">Round</span>
+          <span class="hud-value" id="hud-round">1</span>
+        </div>
+        <div class="hud-box target">
+          <span class="hud-label">Target</span>
+          <span class="hud-value" id="hud-target">40</span>
+        </div>
+        <div class="hud-box">
+          <span class="hud-label">Spins</span>
+          <span class="hud-value" id="hud-spins">5</span>
+        </div>
+      </header>
+
+      <div class="score-bar">
+        <div class="score-fill" id="score-fill"></div>
+        <span class="score-text"><span id="hud-score">0</span> / <span id="hud-target-2">40</span></span>
+      </div>
+
+      <div class="machine">
+        <div class="lights" aria-hidden="true"></div>
+        <div class="reels" id="reels">
+          <div class="reel" data-reel="0"><div class="strip"></div></div>
+          <div class="reel" data-reel="1"><div class="strip"></div></div>
+          <div class="reel" data-reel="2"><div class="strip"></div></div>
+          <div class="payline" data-row="0"></div>
+          <div class="payline" data-row="1"></div>
+          <div class="payline" data-row="2"></div>
+        </div>
+        <div class="calc" id="calc">
+          <span class="chips" id="calc-coins">0</span>
+          <span class="times">×</span>
+          <span class="mult" id="calc-mult">1</span>
+        </div>
+        <p class="message" id="message">Press SPIN</p>
+      </div>
+
+      <button id="spin-btn" class="spin-btn">SPIN</button>
+      <p class="seed" id="seed-line"></p>
+    </section>
+
+    <!-- Overlay for round clear / game over -->
+    <div id="overlay" class="overlay hidden">
+      <div class="panel">
+        <h2 id="overlay-title"></h2>
+        <p id="overlay-body"></p>
+        <button id="overlay-btn" class="big-btn"></button>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
