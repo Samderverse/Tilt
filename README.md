@@ -14,6 +14,10 @@ A chaotic pub fruit machine roguelike by Samderverse. Spin, hold, nudge and surv
 - Earn £ each round: round reward + £1 per spare spin + interest (£1 per £5 held, max £5).
 - Beat Pint 8's Landlord to win the run.
 
+## Learning to play
+- **How to Play**: a 7-page illustrated guide, on the title screen and in Settings.
+- **Tutorial run**: starts a fresh run where the Barman coaches you through your first spins, the Bar and your first Landlord. Tips show once each; turn them back on any time in Settings ("Barman's tips").
+
 ## The Bar (between rounds)
 - **Regulars** (up to 5): Tilt's jokers. They trigger left to right, so order matters. Tap one to sell or move it.
   28 so far, across Common, Uncommon, Rare and Legendary (Legendaries only come in Prawn Cocktail crisps).
@@ -67,6 +71,9 @@ The Bouncer, Health Inspector, Last Orders, Power Cut, The Taxman, Drunk Uncle, 
 - `js/scoring.js`: win lines and scoring
 - `js/reels.js`, `js/symbols.js`, `js/rng.js`: reels, symbols, seeded randomness
 - `js/main.js`: UI flow and animation
+- `js/art.js`: Regular cards, Beer Mat coasters, scratchcards, crisp packets (all CSS/SVG)
+- `js/howto.js`: How to Play guide
+- `js/coach.js`: tutorial tips
 - `js/audio.js`: music/ambience/sfx mixer
 - `js/fx.js`: particles, flashes, shakes, glitches
 - `js/settings.js`: settings and credits
@@ -75,4 +82,5 @@ The Bouncer, Health Inspector, Last Orders, Power Cut, The Taxman, Drunk Uncle, 
 ## Roadmap
 - Drop A: holds, nudges, Pints, Landlords, effects, audio, icon ✅
 - Drop B: The Bar (shop), Regulars, Beer Mats, Scratchcards, crisp packets ✅
-- Drop C: more polish, run summary extras, balance pass
+- Rebalance: 5 lines, ×3 base Mult, best-line Mult, 6 spins ✅
+- Drop C: art & identity pass, How to Play, tutorial ✅

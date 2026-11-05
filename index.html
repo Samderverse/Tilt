@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Bungee+Shade&family=Rubik:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Bungee+Shade&family=Monoton&family=Permanent+Marker&family=Rye&family=Rubik:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -31,6 +31,10 @@
       <p class="tagline">The machine always wins. Probably.</p>
       <button id="start-btn" class="big-btn">Tap to Play</button>
       <button id="new-run-btn" class="link-btn hidden">Start a new run</button>
+      <div class="title-menu">
+        <button class="menu-btn" id="howto-btn">📖 How to Play</button>
+        <button class="menu-btn" id="tutorial-btn">🎓 Tutorial run</button>
+      </div>
       <p class="best" id="best-line"></p>
       <p class="sound-hint">🔊 Best with sound on</p>
     </section>
@@ -150,7 +154,7 @@
       <div class="topbar">
         <button class="icon-btn" id="bar-settings-btn" aria-label="Settings">⚙︎</button>
         <div class="round-label">
-          <span class="bar-title">The Bar</span>
+          <span class="bar-title neon">The Bar</span>
           <span class="kind" id="bar-next">Next: Full Pint</span>
         </div>
         <div class="money" id="bar-money">£4</div>
@@ -164,14 +168,18 @@
         <div class="regulars" id="bar-regulars"></div>
         <p class="hint">Tap a Regular to sell or move them. They act left to right.</p>
 
-        <div class="bar-section-head">
-          <h3>Behind the bar</h3>
-          <button class="restock-btn" id="restock-btn">Restock £1</button>
+        <div class="chalkboard">
+          <div class="bar-section-head">
+            <h3 class="chalk">Today's specials</h3>
+            <button class="restock-btn" id="restock-btn">🔔 Restock £1</button>
+          </div>
+          <div class="stock" id="stock"></div>
         </div>
-        <div class="stock" id="stock"></div>
 
-        <div class="bar-section-head"><h3>Crisps</h3></div>
-        <div class="stock packets" id="packets"></div>
+        <div class="shelf">
+          <div class="bar-section-head"><h3>Crisps</h3><span class="muted">Pick 1 inside</span></div>
+          <div class="stock packets" id="packets"></div>
+        </div>
 
         <div class="bar-section-head">
           <h3>Your machine</h3>
@@ -217,6 +225,35 @@
       </div>
     </div>
 
+    <!-- How to Play -->
+    <div id="howto" class="overlay hidden">
+      <div class="panel howto-panel" id="ht-card">
+        <button class="ht-x" id="ht-close" aria-label="Close">✕</button>
+        <p class="panel-kicker">How to Play</p>
+        <div class="ht-art" id="ht-art"></div>
+        <h2 id="ht-title"></h2>
+        <p class="ht-body" id="ht-body"></p>
+        <div class="ht-dots" id="ht-dots"></div>
+        <div class="ht-nav">
+          <button class="small-btn" id="ht-back">Back</button>
+          <button class="big-btn" id="ht-next">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Coach tips (tutorial) -->
+    <div id="coach" class="hidden" aria-live="polite">
+      <div class="coach-spot"></div>
+      <div class="coach-bubble">
+        <div class="coach-who"><span class="coach-face">🧔‍♂️</span><b>The Barman</b></div>
+        <p class="coach-text"></p>
+        <div class="coach-actions">
+          <button class="link-btn coach-skip">Skip tips</button>
+          <button class="big-btn coach-ok">Got it</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Settings -->
     <div id="settings" class="overlay hidden">
       <div class="panel settings-panel">
@@ -226,6 +263,8 @@
         <label class="slider"><span>Sound effects</span><input type="range" min="0" max="1" step="0.05" id="vol-sfx"></label>
         <label class="toggle"><span>Reduced effects</span><input type="checkbox" id="opt-reduced"></label>
         <label class="toggle"><span>Vibration</span><input type="checkbox" id="opt-vibration"></label>
+        <label class="toggle"><span>Barman's tips</span><input type="checkbox" id="opt-tips"></label>
+        <button class="menu-btn wide" id="settings-howto">📖 How to Play</button>
         <div class="settings-actions">
           <button class="link-btn danger" id="abandon-btn">Abandon run</button>
           <button class="big-btn" id="settings-close">Done</button>

@@ -7,6 +7,9 @@ import { REG_BY_ID, RARITY, MAX_REGULARS, sellValue, describeEffect } from './re
 import * as A from './audio.js';
 import * as FX from './fx.js';
 import { loadSettings, saveSettings, CREDITS } from './settings.js';
+import { regularCard, itemArt, crispPacket, hueOf } from './art.js';
+import { openHowTo, bindHowTo } from './howto.js';
+import { tip, tipsOn, setTips, resetTips } from './coach.js';
 
 const SAVE_KEY = 'tilt.run.v3';
 const BEST_KEY = 'tilt.best.v2';
@@ -34,6 +37,7 @@ const el = {
   volMusic: $('vol-music'), volAmb: $('vol-ambience'), volSfx: $('vol-sfx'),
   optReduced: $('opt-reduced'), optVibe: $('opt-vibration'), abandon: $('abandon-btn'),
   credits: $('credits-list'),
+  howtoBtn: $('howto-btn'), tutorialBtn: $('tutorial-btn'), settingsHowto: $('settings-howto'), optTips: $('opt-tips'),
   // Bar
   barNext: $('bar-next'), barMoney: $('bar-money'), barRegs: $('bar-regulars'), barRegCount: $('bar-reg-count'),
   stock: $('stock'), packets: $('packets'), restock: $('restock-btn'), levels: $('levels'),
@@ -191,8 +195,8 @@ function renderRegulars(container, where) {
     if (!r) { cards.push(`<div class="reg-card empty"></div>`); continue; }
     const d = REG_BY_ID[r.id];
     const b = regBadge(r);
-    cards.push(`<button class="reg-card" data-slot="${i}" style="--rc:${RARITY[d.rarity].colour}">
-      <span class="face">${d.face}</span><span class="nm">${d.name}</span>${b ? `<span class="badge">${b}</span>` : ''}</button>`);
+    cards.push(`<button class="reg-card r-${d.rarity}" data-slot="${i}" style="--h:${hueOf(r.id)}">
+      <span class="rc-portrait"><span class="face">${d.face}</span></span><span class="nm">${d.name}</span>${b ? `<span class="badge">${b}</span>` : ''}</button>`);
   }
   container.innerHTML = cards.join('');
   container.querySelectorAll('.reg-card[data-slot]').forEach((c) =>
@@ -234,6 +238,7 @@ function renderAll() {
 function showScreen(name) {
   for (const s of [el.title, el.game, el.barScreen]) s.classList.remove('active');
   ({ title: el.title, game: el.game, bar: el.barScreen })[name].classList.add('active');
+  document.body.classList.toggle('in-bar', name === 'bar');
 }
 
 // ---------- Spin animation ----------
@@ -384,6 +389,9 @@ async function doSpin() {
   if (run.phase === 'nudge') {
     renderControls();
     showPreview();
+    await tip('nudge', document.querySelector('.controls'), `The reels have landed. Use <b>▲ ▼</b> to <b>nudge</b> a reel one step and line up matches. You get a couple per round.`, { place: 'below' });
+    await tip('preview', el.calc, `This shows what the spin is worth right now: <b>Coins × Mult</b>. It updates as you nudge.`);
+    await tip('collect', el.spinBtn, `Happy with it? Tap <b>COLLECT</b> to bank the score.`);
   } else {
     await doCollect();
   }
@@ -408,6 +416,12 @@ async function doCollect() {
   } else {
     busy = false;
     renderControls();
+    if (result.wins.length) {
+      await tip('lines', el.reelsWrap, `There are <b>5 win lines</b>: three across and two diagonals. <b>3 in a row</b> pays big, and <b>2 matching from the left</b> pays a little.`);
+    }
+    if (run.spinsThisRound >= 1 && run.holdsLeft > 0) {
+      await tip('hold', document.querySelector('.controls'), `Like what's on a reel? Tap <b>HOLD</b> before you spin and it stays put. You can't hold the same reel twice in a row.`, { place: 'below' });
+    }
   }
 }
 
@@ -612,6 +626,12 @@ async function roundIntro() {
   busy = false;
   say('Press SPIN');
   renderControls();
+  if (i.boss) {
+    await tip('boss', el.bossStrip, `This is a <b>Landlord</b>. His rule lasts all round, and the bar shows his <b>patience</b> draining as you score. Tap his name any time to re-read the rule.`);
+  } else if (i.round === 1) {
+    await tip('target', el.bar, `Score this <b>target</b> within your <b>6 spins</b> to clear the round. Each spin adds to it.`);
+    await tip('spin', el.spinBtn, `Right, pull the lever. Tap <b>SPIN</b>!`);
+  }
 }
 
 async function bossDefeated() {
@@ -713,17 +733,24 @@ function enterBar() {
   const p = run.bar.pending;
   if (p?.kind === 'packet') openPacket(p);
   if (p?.kind === 'scratch') openPicker(p.id, (r, k) => S.applyScratch(run, p.id, r, k), () => S.cancelScratch(run));
+  if (!p) barTips();
+}
+
+async function barTips() {
+  await tip('bar', null, `Welcome to <b>the Bar</b>. Spend your winnings here between rounds. Leftover money earns <b>interest</b>: £1 for every £5 you hold, up to £5.`);
+  await tip('stock', document.querySelector('.chalkboard'), `<b>Regulars</b> stand at your machine and boost every spin. <b>Beer Mats</b> level up a symbol. <b>Scratchcards</b> change your reels. Tap anything for details.`);
+  await tip('crisps', el.packets, `<b>Crisps</b> are a lucky dip: open a packet and pick 1 of the goodies inside.`);
+  await tip('leave', el.leaveBar, `When you're done, head <b>back to the machine</b>. Good luck!`);
 }
 
 function itemCardHTML(item, idx, kind) {
   const inf = S.itemInfo(item);
-  const textIcon = item.type === 'mat' && SYMBOLS[item.id].text;
   const cant = !item.sold && run.money < item.price;
-  return `<button class="item${item.sold ? ' sold' : ''}${cant ? ' cant' : ''}" data-kind="${kind}" data-idx="${idx}" style="--ic:${inf.colour}">
-    <span class="tag">${inf.tag}</span>
-    <span class="ic${textIcon ? ' text' : ''}">${inf.icon}</span>
-    <span class="nm">${inf.name}</span>
-    <span class="price">£${item.price}</span>
+  const label = item.type === 'mat' ? `<span class="nm">${inf.name}</span>` : '';
+  return `<button class="item item-${item.type}${item.sold ? ' sold' : ''}${cant ? ' cant' : ''}" data-kind="${kind}" data-idx="${idx}" style="--ic:${inf.colour}" aria-label="${inf.name}, £${item.price}">
+    ${itemArt(item)}
+    ${label}
+    <span class="price-tag">£${item.price}</span>
   </button>`;
 }
 
@@ -737,7 +764,7 @@ function renderBar() {
   el.packets.innerHTML = run.bar.packets.map((it, i) => itemCardHTML(it, i, 'packet')).join('');
   [...el.stock.children, ...el.packets.children].forEach((b) =>
     b.addEventListener('click', () => openItemSheet(b.dataset.kind, Number(b.dataset.idx))));
-  el.restock.textContent = `Restock £${run.bar.rerollCost}`;
+  el.restock.textContent = `🔔 Restock £${run.bar.rerollCost}`;
   el.restock.disabled = run.money < run.bar.rerollCost;
 
   const lv = Object.entries(run.levels).filter(([, n]) => n > 0);
@@ -746,8 +773,9 @@ function renderBar() {
     : `<p class="hint">No Beer Mats yet. Each one levels up a symbol.</p>`;
 }
 
-function openSheet({ face, faceText = false, tag, tagColour, name, desc, status = '', actions }) {
-  el.sheetFace.textContent = face;
+function openSheet({ face = '', art = '', faceText = false, tag, tagColour, name, desc, status = '', actions }) {
+  if (art) el.sheetFace.innerHTML = art; else el.sheetFace.textContent = face;
+  el.sheetFace.classList.toggle('art', !!art);
   el.sheetFace.classList.toggle('text', faceText);
   el.sheetTag.textContent = tag;
   el.sheetTag.style.color = tagColour || '';
@@ -801,7 +829,7 @@ function openRegularSheet(slot, where) {
   }
   actions.push({ label: 'Close', cls: 'big-btn', onClick: closeSheet });
   openSheet({
-    face: d.face, tag: `${rar.name} Regular · slot ${slot + 1}`, tagColour: rar.colour, name: d.name, desc: d.desc,
+    art: regularCard(r.id, 'lg', regBadge(r)), tag: `${rar.name} Regular · slot ${slot + 1}`, tagColour: rar.colour, name: d.name, desc: d.desc,
     status: regStatus(slot) || (where === 'game' ? 'Rearrange your Regulars at the Bar.' : ''),
     actions,
   });
@@ -817,7 +845,7 @@ function openItemSheet(kind, idx) {
   let status = reason;
   if (item.type === 'mat') status = status || `${SYMBOLS[item.id].name} is level ${(run.levels[item.id] || 0) + 1} now.`;
   openSheet({
-    face: inf.icon, faceText: item.type === 'mat' && SYMBOLS[item.id].text,
+    art: itemArt(item, 'lg'),
     tag: inf.tag, tagColour: inf.colour, name: inf.name, desc: inf.desc, status,
     actions: [
       { label: 'Not now', onClick: closeSheet },
@@ -903,7 +931,7 @@ function openPicker(scratchId, onApply, onCancel = null) {
 // ---------- Crisp packets ----------
 function openPacket(pending) {
   const pk = S.PACKET_BY_ID[pending.id];
-  el.packetBag.textContent = pk.icon;
+  el.packetBag.innerHTML = crispPacket(pending.id, true);
   el.packetBag.classList.remove('open');
   el.packetTitle.textContent = pk.name;
   A.sfx.spin();
@@ -915,10 +943,9 @@ function openPacket(pending) {
     FX.burstFrom(el.packetBag, 24, 'confetti', 0.9);
     el.packetChoices.innerHTML = pending.choices.map((c, i) => {
       const inf = S.itemInfo(c);
-      const textIcon = c.type === 'mat' && SYMBOLS[c.id].text;
-      return `<button class="item" data-i="${i}" style="--ic:${inf.colour}">
-        <span class="tag">${inf.tag}</span><span class="ic${textIcon ? ' text' : ''}">${inf.icon}</span>
-        <span class="nm">${inf.name}</span><span class="desc">${inf.desc}</span></button>`;
+      return `<button class="item choice item-${c.type}" data-i="${i}" style="--ic:${inf.colour}">
+        ${itemArt(c)}
+        ${c.type === 'mat' ? `<span class="nm">${inf.name}</span>` : ''}<span class="desc">${inf.desc}</span></button>`;
     }).join('');
     el.packetChoices.querySelectorAll('.item').forEach((b) => b.addEventListener('click', () => choosePacket(pending, Number(b.dataset.i))));
   }, 1400);
@@ -1005,6 +1032,7 @@ function openSettings() {
   el.volSfx.value = settings.sfx;
   el.optReduced.checked = settings.reducedFx;
   el.optVibe.checked = settings.vibration;
+  el.optTips.checked = tipsOn();
   el.settings.classList.remove('hidden');
   A.setMuffled(true);
 }
@@ -1028,6 +1056,7 @@ function bindSettings() {
   };
   [el.volMusic, el.volAmb, el.volSfx, el.optReduced, el.optVibe].forEach((n) => n.addEventListener('input', onChange));
   el.volSfx.addEventListener('change', () => A.sfx.coin());
+  el.optTips.addEventListener('change', () => { if (el.optTips.checked) resetTips(); else setTips(false); });
   el.settingsBtn.addEventListener('click', () => { A.unlock(); openSettings(); });
   el.barSettingsBtn.addEventListener('click', () => { A.unlock(); openSettings(); });
   el.settingsClose.addEventListener('click', closeSettings);
@@ -1035,7 +1064,7 @@ function bindSettings() {
     if (!confirm('Abandon this run? It can\'t be undone.')) return;
     clearSave();
     closeSettings();
-    [el.overlay, el.sheet, el.picker, el.packet].forEach((o) => o.classList.add('hidden'));
+    [el.overlay, el.sheet, el.picker, el.packet, $('coach')].forEach((o) => o.classList.add('hidden'));
     document.body.className = settings.reducedFx ? 'reduced-fx' : '';
     A.setBossMode(false);
     A.setMuffled(false);
@@ -1090,6 +1119,18 @@ function boot() {
     else if (saved) startRun(saved, true);
     else startRun(G.newRun(randomSeed()));
   });
+  bindHowTo();
+  el.howtoBtn.addEventListener('click', () => { A.unlock(); openHowTo(); });
+  el.settingsHowto.addEventListener('click', () => { closeSettings(); openHowTo(); });
+  el.tutorialBtn.addEventListener('click', () => {
+    A.unlock();
+    if (saved && !confirm('Start a fresh tutorial run? Your current run will be lost.')) return;
+    resetTips();
+    clearSave();
+    A.playMusic('main');
+    startRun(G.newRun(randomSeed()));
+  });
+
   el.newRun.addEventListener('click', () => {
     A.unlock();
     A.playMusic('main');
