@@ -170,7 +170,9 @@ function renderHUD() {
     el.barText.textContent = `${run.score} / ${i.target}`;
   }
 
+  const bossChanged = el.bossStrip.classList.contains('hidden') === !!i.boss;
   el.bossStrip.classList.toggle('hidden', !i.boss);
+  if (bossChanged) requestAnimationFrame(fitLayout);
   if (i.boss) {
     el.bossFace.textContent = i.boss.face;
     el.bossName.textContent = i.boss.name;
@@ -233,6 +235,29 @@ function renderAll() {
   renderRegulars(el.regs, 'game');
   renderReelsStatic();
   renderControls();
+  fitLayout();
+}
+
+// Shrink the reels until the whole game screen fits the phone, so nothing ever scrolls.
+function fitLayout() {
+  if (!el.game.classList.contains('active')) return;
+  const root = document.documentElement;
+  let cell = Math.min(92, Math.floor(innerWidth * 0.2));
+  root.style.setProperty('--cell', cell + 'px');
+  el.game.scrollTop = 0;
+  // The SPIN button is pinned to the bottom, so a screen that fits reads as exactly full;
+  // only a true overflow (scrollHeight > clientHeight) means it's too tall.
+  const over = () => el.game.scrollHeight > el.game.clientHeight;
+  while (over() && cell > 58) {
+    cell -= 3;
+    root.style.setProperty('--cell', cell + 'px');
+  }
+  // One extra step of headroom so a wrapping hint line can't tip it over later.
+  if (cell < Math.min(92, Math.floor(innerWidth * 0.2)) && cell > 58) {
+    cell -= 3;
+    root.style.setProperty('--cell', cell + 'px');
+  }
+  if (run) renderReelsStatic();
 }
 
 function showScreen(name) {
@@ -1182,7 +1207,24 @@ function boot() {
     if (nk) onNudge(...nk);
   });
 
-  window.addEventListener('resize', () => { if (run && !busy && el.game.classList.contains('active')) renderReelsStatic(); });
+  window.addEventListener('resize', () => { window.scrollTo(0, 0); if (run && !busy) fitLayout(); });
+  // Belt and braces: if anything ever scrolls the page itself, put it straight back.
+  window.addEventListener('scroll', () => { if (window.scrollY || window.scrollX) window.scrollTo(0, 0); });
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', () => window.scrollTo(0, 0));
+
+  // ?taps=1 shows where each tap lands and which button it hit (for testing on a phone).
+  if (params.has('taps')) {
+    document.addEventListener('pointerdown', (e) => {
+      const d = document.createElement('div');
+      d.className = 'tap-dot';
+      d.style.left = e.clientX + 'px';
+      d.style.top = e.clientY + 'px';
+      document.body.appendChild(d);
+      setTimeout(() => d.remove(), 900);
+      const b = e.target.closest('button');
+      if (b) { b.classList.add('tap-hit'); setTimeout(() => b.classList.remove('tap-hit'), 600); }
+    }, true);
+  }
 }
 
 boot();

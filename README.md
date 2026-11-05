@@ -29,17 +29,23 @@ A chaotic pub fruit machine roguelike by Samderverse. Spin, hold, nudge and surv
 ## Install on your phone
 Open the GitHub Pages link, then:
 
-**iPhone (Safari)**
-1. Tap the Share button.
-2. Tap **Add to Home Screen**, then **Add**.
-3. Open Tilt from the home screen for full screen.
+**iPhone (Safari, iOS 26)**
+1. Tap the **⋯ / three lines** button at the left of the address bar.
+2. Tap **Share**.
+3. Tap **View More**.
+4. Tap **Add to Home Screen**.
+5. Leave **Open as Web App** switched on, then tap **Add**.
+6. Open Tilt from the home screen for full screen.
+- On older iOS versions the Share button sits in the toolbar instead: Share → Add to Home Screen → Add.
 - If there's no sound, check the silent switch and media volume.
 - Vibration isn't supported on iPhone web apps.
 
 **Android (Chrome)**
-1. Tap the ⋮ menu.
-2. Tap **Install app** (or **Add to Home screen** on older versions).
-3. Open Tilt from the home screen or app drawer for full screen.
+1. Tap the **⋮** menu (top right).
+2. Tap **Add to home screen** (some versions call it **Install app**).
+3. If asked to choose, pick **Install** (not "Create shortcut"), then confirm with **Install** / **Add**.
+4. Open Tilt from the home screen or app drawer for full screen.
+- Chrome sometimes offers an "Install app" banner at the bottom of the page; that does the same thing.
 - Vibration works on Android, and can be turned off in Settings (⚙).
 
 **Updating the icon:** phones cache home-screen icons. After an icon change, remove Tilt from the home screen and add it again.
@@ -56,6 +62,7 @@ The Bouncer, Health Inspector, Last Orders, Power Cut, The Taxman, Drunk Uncle, 
 - `?money=50` starts with extra cash
 - `?regs=jen,barman,darts` starts with those Regulars (ids in `js/regulars.js`)
 - `?bar=1` opens the Bar straight away
+- `?taps=1` shows a dot wherever your phone registers a tap, and outlines the button it hit
 - Desktop keys: Space spins/collects, 1–3 hold, Q/A W/S E/D nudge reels up/down
 
 ## Audio

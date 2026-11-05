@@ -47,12 +47,22 @@ body {
   background: radial-gradient(ellipse at top, var(--bg-2), var(--bg) 70%);
   transition: background .8s;
 }
-button { font: inherit; color: inherit; }
+/* Lock the page in place. If the document ever scrolls, iOS Safari draws
+   fixed pop-ups in one place but registers taps on them somewhere else. */
+html, body { position: fixed; inset: 0; width: 100%; overscroll-behavior: none; }
+/* Safari (not the home-screen app) paints its own grey button styling unless told not to. */
+button {
+  font: inherit; color: inherit;
+  -webkit-appearance: none; appearance: none;
+  background-color: transparent;
+  touch-action: manipulation;
+  -webkit-user-select: none; user-select: none;
+}
 
 #app {
   max-width: 480px;
   margin: 0 auto;
-  height: 100dvh;
+  height: 100%;
   padding: calc(env(safe-area-inset-top) + 8px) 16px calc(env(safe-area-inset-bottom) + 12px);
   position: relative;
   z-index: 1;
@@ -77,7 +87,7 @@ body.boss .crt {
 @keyframes vignette-pulse { 50% { opacity: .75; } }
 body.reduced-fx .crt { background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,.4) 100%); animation: none; }
 
-.screen { display: none; flex-direction: column; align-items: center; height: 100%; }
+.screen { display: none; flex-direction: column; align-items: center; height: 100%; overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
 .screen.active { display: flex; }
 .hidden { display: none !important; }
 
@@ -897,7 +907,7 @@ body.in-bar .crt { background: radial-gradient(ellipse at center, transparent 50
 /* ---------- Title menu ---------- */
 .title-menu { display: flex; gap: 10px; margin-top: 4px; }
 .menu-btn {
-  border: 2px solid var(--wood); background: rgba(0,0,0,.35); border-radius: 12px; padding: 10px 14px; cursor: pointer;
+  border: 2px solid #5a2a35; background-color: #24090f; color: var(--cream); border-radius: 12px; padding: 12px 16px; min-height: 48px; cursor: pointer;
   font-weight: 700; font-size: 14px;
 }
 .menu-btn:active { transform: translateY(2px); }
@@ -1004,3 +1014,31 @@ body.in-bar .crt { background: radial-gradient(ellipse at center, transparent 50
   background: linear-gradient(90deg, #b8861a 0%, #ffe58a 18%, #fff6c9 28%, #e0a62a 44%, #ffd75e 62%, #fff1b0 74%, #c9962a 88%, #b8861a 100%);
   background-size: 200% 100%;
 }
+
+/* Bigger, clearer tap targets */
+.coach-actions .big-btn { min-height: 48px; min-width: 120px; }
+.coach-actions .link-btn { min-height: 44px; padding: 10px 6px; }
+.panel .big-btn { min-height: 52px; }
+.ht-nav .small-btn { min-height: 48px; min-width: 88px; }
+.link-btn { min-height: 44px; }
+.icon-btn { min-width: 44px; min-height: 44px; }
+.sheet-actions .small-btn, .sheet-actions .big-btn { min-height: 48px; }
+/* Pop-ups scroll inside themselves rather than moving the page */
+.overlay { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+
+/* ?taps=1 debug: shows where the phone registered each tap */
+.tap-dot { position: fixed; z-index: 99; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%;
+  background: rgba(255,0,80,.6); border: 2px solid #fff; pointer-events: none; animation: tapfade .9s forwards; }
+@keyframes tapfade { to { transform: scale(2); opacity: 0; } }
+.tap-hit { outline: 3px solid #00e5ff !important; outline-offset: 2px; }
+.ht-x { z-index: 3; min-width: 44px; min-height: 44px; display: grid; place-items: center; right: 4px; top: 4px; }
+.howto-panel .panel-kicker { margin: 0 44px 4px; }
+/* Reserve two lines for the hint, so the layout fit already allows for wrapping */
+.message { min-height: 2.5em; line-height: 1.25; display: flex; align-items: center; justify-content: center; }
+/* Only the reels should adapt to the screen; nothing else gets squashed */
+.screen > * { flex-shrink: 0; }
+.screen > .bar-scroll { flex: 1 1 auto; min-height: 0; }
+.nudge-btn { padding: 0; min-width: 0; }
+.nudge-pair { gap: 3px; }
+.hold-btn { padding: 0 2px; min-width: 0; font-size: 12px; }
+.message, .message.big { min-height: 0; height: 2.6rem; overflow: hidden; }
