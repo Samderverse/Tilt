@@ -1,8 +1,10 @@
 // Pure game state and rules. No DOM in here, so it can be simulated and tested.
 import { makeRng } from './rng.js';
 import { makeReels, spin as spinStops, toGrid } from './reels.js';
-import { evaluate } from './scoring.js';
+import { findWins, BASE_MULT } from './scoring.js';
 import { BOSSES, BOSS_BY_ID } from './bosses.js';
+import { runHook, aliasesFor, extrasFor } from './regulars.js';
+import { openBar } from './shop.js';
 
 export const CONFIG = {
   spins: 5,
@@ -21,11 +23,11 @@ export const ROUND_KINDS = [
 ];
 
 // Base target for each Pint. Tuned by simulation (see README).
-const PINT_BASE = [55, 95, 150, 230, 350, 520, 760, 1100];
+const PINT_BASE = [60, 125, 260, 520, 1000, 1950, 3700, 7000];
 
 export function baseTarget(pint) {
   if (pint <= PINT_BASE.length) return PINT_BASE[pint - 1];
-  return Math.round(PINT_BASE[PINT_BASE.length - 1] * Math.pow(1.5, pint - PINT_BASE.length));
+  return Math.round(PINT_BASE[PINT_BASE.length - 1] * Math.pow(1.8, pint - PINT_BASE.length));
 }
 
 export function roundInfo(run, round = run.round) {
@@ -39,14 +41,17 @@ export function roundInfo(run, round = run.round) {
 export function newRun(seed) {
   const rng = makeRng(seed + '-run');
   const run = {
-    v: 2,
+    v: 3,
     seed,
     reels: makeReels(makeRng(seed + '-reels')),
     bossOrder: rng.shuffle(BOSSES.map((b) => b.id)),
     round: 1,
     money: CONFIG.startMoney,
+    regulars: [],         // [{ id, state }]
+    levels: {},           // Beer Mat levels per symbol
     spinIndex: 0,
     stops: [0, 0, 0],
+    bar: null,
     stats: { bestSpin: 0, totalSpins: 0, bossesBeaten: 0 },
   };
   startRound(run);
@@ -56,25 +61,26 @@ export function newRun(seed) {
 export function startRound(run) {
   const info = roundInfo(run);
   const boss = info.boss;
+  const ex = extrasFor(run.regulars);
   run.score = 0;
-  run.spinsLeft = boss?.spins ?? CONFIG.spins;
-  run.holdsLeft = CONFIG.holds;
-  run.nudgesLeft = boss?.nudges ?? CONFIG.nudges;
+  run.spinsLeft = (boss?.spins ?? CONFIG.spins) + ex.spins;
+  run.holdsLeft = CONFIG.holds + ex.holds;
+  run.nudgesLeft = boss?.nudges === 0 ? 0 : CONFIG.nudges + ex.nudges;
   run.held = [false, false, false];
   run.lastHeld = [false, false, false];
-  run.phase = 'ready';      // ready -> spinning -> nudge -> scoring -> ready / cleared / failed
+  run.heldMask = [false, false, false];
+  run.phase = 'ready';      // ready -> spinning -> nudge -> scoring -> ready / cleared / failed -> bar
   run.spinsThisRound = 0;
   return info;
 }
 
 // ----- Holds -----
 export function canHold(run, i) {
-  if (run.phase !== 'ready' || run.spinsThisRound === 0) return false;   // nothing to hold on the first spin
-  if (run.held[i]) return true;                                          // can always un-hold
-  if (run.lastHeld[i]) return false;                                     // no holding twice running
+  if (run.phase !== 'ready' || run.spinsThisRound === 0) return false;
+  if (run.held[i]) return true;
+  if (run.lastHeld[i]) return false;
   if (run.holdsLeft <= 0) return false;
-  const heldCount = run.held.filter(Boolean).length;
-  return heldCount < 2;                                                  // must spin at least one reel
+  return run.held.filter(Boolean).length < 2;
 }
 
 export function toggleHold(run, i) {
@@ -97,29 +103,27 @@ export function spin(run) {
   const fresh = spinStops(run.reels, rng);
   run.stops = run.stops.map((s, i) => (run.held[i] ? s : fresh[i]));
   const heldMask = run.held.slice();
+  run.heldMask = heldMask;
   run.lastHeld = run.held.slice();
   run.held = [false, false, false];
 
-  // Drunk Uncle: swap two reels after they land.
   let swap = null;
-  const boss = roundInfo(run).boss;
-  if (boss?.swapReels) {
+  if (roundInfo(run).boss?.swapReels) {
     const a = rng.int(3);
     const b = (a + 1 + rng.int(2)) % 3;
     swap = [a, b];
   }
-
   run.phase = 'spinning';
   return { prevStops, stops: run.stops.slice(), heldMask, swap, rng };
 }
 
-// Called by the UI once reels have visually landed.
 export function landed(run, swap) {
   if (swap) {
     const [a, b] = swap;
     [run.reels[a], run.reels[b]] = [run.reels[b], run.reels[a]];
     [run.stops[a], run.stops[b]] = [run.stops[b], run.stops[a]];
     [run.lastHeld[a], run.lastHeld[b]] = [run.lastHeld[b], run.lastHeld[a]];
+    [run.heldMask[a], run.heldMask[b]] = [run.heldMask[b], run.heldMask[a]];
   }
   run.phase = run.nudgesLeft > 0 ? 'nudge' : 'scoring';
 }
@@ -131,6 +135,7 @@ export function nudge(run, i, dir) {
   const n = run.reels[i].length;
   run.stops[i] = (run.stops[i] - dir + n) % n;
   run.nudgesLeft--;
+  runHook(run.regulars, 'nudge', { run });
   return true;
 }
 
@@ -138,23 +143,60 @@ export function grid(run) {
   return toGrid(run.reels, run.stops);
 }
 
-export function preview(run) {
-  return evaluate(grid(run), roundInfo(run).boss?.mods ?? {});
-}
-
-// ----- Score -----
-export function collect(run) {
+// ----- Scoring pipeline -----
+// Builds the ordered list of steps the UI animates:
+//   { kind: 'line', win, coins, mult }
+//   { kind: 'reg', slot, effect }
+// commit=false works on copies of Regular state, so previews have no side effects.
+export function compute(run, commit) {
   const info = roundInfo(run);
   const boss = info.boss;
-  const result = evaluate(grid(run), boss?.mods ?? {});
-  result.voided = false;
-  if (boss?.voidFirstSpin && run.spinsThisRound === 1) {
-    result.voided = result.total > 0;
-    result.total = 0;
+  const regs = commit ? run.regulars : run.regulars.map((r) => ({ id: r.id, state: JSON.parse(JSON.stringify(r.state)) }));
+  const ctx = {
+    ...(boss?.mods || {}),
+    aliases: aliasesFor(regs),
+    levels: run.levels,
+  };
+  const { wins, blocked } = findWins(grid(run), ctx);
+
+  const voided = !!(boss?.voidFirstSpin && run.spinsThisRound === 1);
+  const scored = voided ? [] : wins;
+  const steps = [];
+  let coins = 0;
+  let mult = BASE_MULT;
+  let money = 0;
+  const apply = (slot, effect) => {
+    if (effect.coins) coins += effect.coins;
+    if (effect.mult) mult += effect.mult;
+    if (effect.xmult) mult *= effect.xmult;
+    if (effect.money) money += effect.money;
+    steps.push({ kind: 'reg', slot, effect, coins, mult });
+  };
+  const base = { run, info, wins: scored, heldMask: run.heldMask || [false, false, false] };
+
+  for (const win of scored) {
+    coins += win.coins;
+    mult += win.mult;
+    steps.push({ kind: 'line', win, coins, mult });
+    for (const { slot, effect } of runHook(regs, 'line', { ...base, win })) apply(slot, effect);
   }
+  for (const { slot, effect } of runHook(regs, 'end', base)) apply(slot, effect);
+
+  mult = Math.round(mult * 100) / 100;
+  const total = scored.length ? Math.floor(coins * mult) : 0;
+  return { wins: scored, blocked, voided, voidedWins: voided ? wins : [], steps, coins, mult, money, total };
+}
+
+export function preview(run) {
+  return compute(run, false);
+}
+
+export function collect(run) {
+  const info = roundInfo(run);
+  const result = compute(run, true);
+  run.money += result.money;
   run.score += result.total;
   run.stats.bestSpin = Math.max(run.stats.bestSpin, result.total);
-
   if (run.score >= info.target) run.phase = 'cleared';
   else if (run.spinsLeft <= 0) run.phase = 'failed';
   else run.phase = 'ready';
@@ -167,17 +209,31 @@ export function payout(run) {
   const info = roundInfo(run);
   const spare = run.spinsLeft;
   const interest = Math.min(CONFIG.interestCap, Math.floor(run.money / CONFIG.interestPer));
-  const total = info.reward + spare + interest;
-  return { reward: info.reward, spare, interest, total };
+  // Peek at Regulars' round-end money without changing their state.
+  const copies = run.regulars.map((r) => ({ id: r.id, state: JSON.parse(JSON.stringify(r.state)) }));
+  const regs = runHook(copies, 'roundEnd', { run, wasBoss: !!info.boss })
+    .filter((x) => x.effect.money)
+    .map((x) => ({ slot: x.slot, money: x.effect.money }));
+  const regMoney = regs.reduce((s, x) => s + x.money, 0);
+  return { reward: info.reward, spare, interest, regs, total: info.reward + spare + interest + regMoney };
 }
 
 export function advance(run) {
   const info = roundInfo(run);
   const pay = payout(run);
+  runHook(run.regulars, 'roundEnd', { run, wasBoss: !!info.boss });
   run.money += pay.total;
   if (info.boss) run.stats.bossesBeaten++;
   if (info.isFinal) { run.phase = 'won'; return { pay, won: true }; }
   run.round++;
   startRound(run);
+  openBar(run);
+  run.phase = 'bar';
   return { pay, won: false };
+}
+
+// Leaving the Bar re-applies round setup, since Regulars bought there can change spins/holds/nudges.
+export function leaveBar(run) {
+  run.bar = null;
+  startRound(run);
 }

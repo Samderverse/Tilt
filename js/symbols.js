@@ -1,4 +1,5 @@
-// Symbol definitions. Coins = base chips, mult = mult added when the symbol wins a line.
+// Symbol definitions. Coins = base chips, mult = mult added when the symbol wins a line of 3.
+// Reel strip entries are strings: 'cherry', or 'cherry:gold' for a gold-leafed one.
 
 export const SYMBOLS = {
   cherry: { id: 'cherry', icon: '🍒', name: 'Cherry', coins: 10,  mult: 1 },
@@ -8,10 +9,17 @@ export const SYMBOLS = {
   bell:   { id: 'bell',   icon: '🔔', name: 'Bell',   coins: 50,  mult: 2 },
   bar:    { id: 'bar',    icon: 'BAR', name: 'Bar',   coins: 80,  mult: 3, text: true },
   seven:  { id: 'seven',  icon: '7',   name: 'Seven', coins: 150, mult: 5, text: true },
+  wild:   { id: 'wild',   icon: '⭐',  name: 'Wild',  coins: 40,  mult: 2 },
 };
 
+// Symbols that appear naturally (wilds only come from Scratchcards).
+export const BASE_SYMBOLS = ['cherry', 'lemon', 'grapes', 'melon', 'bell', 'bar', 'seven'];
+
+// Each Beer Mat level adds this much to the symbol.
+export const LEVEL_COINS = 10;
+export const LEVEL_MULT = 1;
+
 // How many of each symbol sit on a starting reel strip.
-// Later phases let the player add, remove and upgrade these.
 export const STARTING_STRIP = {
   cherry: 3,
   lemon: 3,
@@ -21,3 +29,7 @@ export const STARTING_STRIP = {
   bar: 1,
   seven: 1,
 };
+
+export const baseId = (entry) => entry.split(':')[0];
+export const isGold = (entry) => entry.endsWith(':gold');
+export const symbolOf = (entry) => SYMBOLS[baseId(entry)];

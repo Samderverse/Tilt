@@ -79,6 +79,8 @@
         <span class="score-text" id="score-text">0 / 55</span>
       </div>
 
+      <div class="regulars" id="regulars" aria-label="Your Regulars"></div>
+
       <div class="machine" id="machine">
         <div class="lights" aria-hidden="true"></div>
         <div class="reels" id="reels">
@@ -135,6 +137,79 @@
         <h2 id="overlay-title"></h2>
         <div id="overlay-body"></div>
         <button id="overlay-btn" class="big-btn"></button>
+        <div id="overlay-foot" class="panel-foot"></div>
+      </div>
+    </div>
+
+    <!-- The Bar (shop) -->
+    <section id="bar-screen" class="screen">
+      <div class="topbar">
+        <button class="icon-btn" id="bar-settings-btn" aria-label="Settings">⚙︎</button>
+        <div class="round-label">
+          <span class="bar-title">The Bar</span>
+          <span class="kind" id="bar-next">Next: Full Pint</span>
+        </div>
+        <div class="money" id="bar-money">£4</div>
+      </div>
+
+      <div class="bar-scroll">
+        <div class="bar-section-head">
+          <h3>Your Regulars</h3>
+          <span class="muted" id="bar-reg-count">0 / 5</span>
+        </div>
+        <div class="regulars" id="bar-regulars"></div>
+        <p class="hint">Tap a Regular to sell or move them. They act left to right.</p>
+
+        <div class="bar-section-head">
+          <h3>Behind the bar</h3>
+          <button class="restock-btn" id="restock-btn">Restock £1</button>
+        </div>
+        <div class="stock" id="stock"></div>
+
+        <div class="bar-section-head"><h3>Crisps</h3></div>
+        <div class="stock packets" id="packets"></div>
+
+        <div class="bar-section-head">
+          <h3>Your machine</h3>
+          <button class="restock-btn ghost" id="view-reels-btn">View reels</button>
+        </div>
+        <div class="levels" id="levels"></div>
+      </div>
+
+      <button id="leave-bar-btn" class="spin-btn leave">Back to the machine</button>
+    </section>
+
+    <!-- Info sheet (Regulars, items) -->
+    <div id="sheet" class="overlay hidden">
+      <div class="panel sheet-panel">
+        <div class="sheet-face" id="sheet-face"></div>
+        <span class="tag" id="sheet-tag"></span>
+        <h2 id="sheet-name"></h2>
+        <p id="sheet-desc"></p>
+        <p class="sheet-status" id="sheet-status"></p>
+        <div class="sheet-actions" id="sheet-actions"></div>
+      </div>
+    </div>
+
+    <!-- Reel picker (Scratchcards) -->
+    <div id="picker" class="overlay hidden">
+      <div class="panel picker-panel">
+        <p class="panel-kicker" id="picker-kicker"></p>
+        <h2 id="picker-title"></h2>
+        <p class="muted" id="picker-sub"></p>
+        <div id="picker-reels"></div>
+        <button class="link-btn" id="picker-cancel">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Crisp packet opening -->
+    <div id="packet" class="overlay hidden">
+      <div class="panel packet-panel">
+        <div class="packet-bag" id="packet-bag"></div>
+        <h2 id="packet-title"></h2>
+        <p class="muted">Pick one.</p>
+        <div class="packet-choices" id="packet-choices"></div>
+        <button class="link-btn" id="packet-skip">Skip</button>
       </div>
     </div>
 

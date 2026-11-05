@@ -1,24 +1,27 @@
 import { randomSeed } from './rng.js';
-import { SYMBOLS } from './symbols.js';
+import { SYMBOLS, baseId, isGold } from './symbols.js';
 import { visibleOnReel, ROWS } from './reels.js';
 import * as G from './game.js';
+import * as S from './shop.js';
+import { REG_BY_ID, RARITY, MAX_REGULARS, sellValue, describeEffect } from './regulars.js';
 import * as A from './audio.js';
 import * as FX from './fx.js';
 import { loadSettings, saveSettings, CREDITS } from './settings.js';
 
-const SAVE_KEY = 'tilt.run.v2';
+const SAVE_KEY = 'tilt.run.v3';
 const BEST_KEY = 'tilt.best.v2';
 
 // ---------- DOM ----------
 const $ = (id) => document.getElementById(id);
 const el = {
-  title: $('title-screen'), game: $('game-screen'),
+  title: $('title-screen'), game: $('game-screen'), barScreen: $('bar-screen'),
   start: $('start-btn'), newRun: $('new-run-btn'), best: $('best-line'),
   pint: $('pint-label'), kind: $('kind-label'), money: $('money'),
   targetLabel: $('target-label'), target: $('hud-target'), spins: $('hud-spins'),
   holds: $('hud-holds'), nudges: $('hud-nudges'),
   bossStrip: $('boss-strip'), bossFace: $('boss-strip-face'), bossName: $('boss-strip-name'), bossRule: $('boss-strip-rule'),
   bar: $('score-bar'), fill: $('score-fill'), barText: $('score-text'),
+  regs: $('regulars'),
   machine: $('machine'), reelsWrap: $('reels'),
   reels: [...document.querySelectorAll('.reel')],
   paylines: [...document.querySelectorAll('.payline')],
@@ -26,11 +29,20 @@ const el = {
   calc: $('calc'), coins: $('calc-coins'), mult: $('calc-mult'),
   message: $('message'), spinBtn: $('spin-btn'), seed: $('seed-line'),
   overlay: $('overlay'), panel: $('panel'), oFace: $('overlay-face'), oKicker: $('overlay-kicker'),
-  oTitle: $('overlay-title'), oBody: $('overlay-body'), oBtn: $('overlay-btn'),
-  settings: $('settings'), settingsBtn: $('settings-btn'), settingsClose: $('settings-close'),
+  oTitle: $('overlay-title'), oBody: $('overlay-body'), oBtn: $('overlay-btn'), oFoot: $('overlay-foot'),
+  settings: $('settings'), settingsBtn: $('settings-btn'), barSettingsBtn: $('bar-settings-btn'), settingsClose: $('settings-close'),
   volMusic: $('vol-music'), volAmb: $('vol-ambience'), volSfx: $('vol-sfx'),
   optReduced: $('opt-reduced'), optVibe: $('opt-vibration'), abandon: $('abandon-btn'),
   credits: $('credits-list'),
+  // Bar
+  barNext: $('bar-next'), barMoney: $('bar-money'), barRegs: $('bar-regulars'), barRegCount: $('bar-reg-count'),
+  stock: $('stock'), packets: $('packets'), restock: $('restock-btn'), levels: $('levels'),
+  viewReels: $('view-reels-btn'), leaveBar: $('leave-bar-btn'),
+  sheet: $('sheet'), sheetFace: $('sheet-face'), sheetTag: $('sheet-tag'), sheetName: $('sheet-name'),
+  sheetDesc: $('sheet-desc'), sheetStatus: $('sheet-status'), sheetActions: $('sheet-actions'),
+  picker: $('picker'), pickerPanel: document.querySelector('.picker-panel'), pickerKicker: $('picker-kicker'),
+  pickerTitle: $('picker-title'), pickerSub: $('picker-sub'), pickerReels: $('picker-reels'), pickerCancel: $('picker-cancel'),
+  packet: $('packet'), packetBag: $('packet-bag'), packetTitle: $('packet-title'), packetChoices: $('packet-choices'), packetSkip: $('packet-skip'),
 };
 
 let run = null;
@@ -42,7 +54,7 @@ function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(run)); } c
 function load() {
   try {
     const r = JSON.parse(localStorage.getItem(SAVE_KEY));
-    return r && r.v === 2 ? r : null;
+    return r && r.v === 3 ? r : null;
   } catch { return null; }
 }
 function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch {} }
@@ -59,6 +71,7 @@ function bestText() {
 // ---------- Helpers ----------
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const info = () => G.roundInfo(run);
+const fmtMult = (m) => (Number.isInteger(m) ? String(m) : m.toFixed(1));
 
 function bump(node) { node.classList.remove('bump'); void node.offsetWidth; node.classList.add('bump'); }
 
@@ -70,14 +83,31 @@ function say(text, big = false) {
 
 function setCalc(coins, mult, preview = false) {
   el.coins.textContent = coins;
-  el.mult.textContent = mult;
+  el.mult.textContent = fmtMult(mult);
   el.calc.classList.toggle('preview', preview);
 }
 
-function cellHTML(id) {
+function toast(text, ms = 2200) {
+  let t = document.querySelector('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
+  t.textContent = text;
+  t.classList.remove('show');
+  void t.offsetWidth;
+  t.classList.add('show');
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+function cellHTML(entry) {
+  const id = baseId(entry);
   const s = SYMBOLS[id];
+  const cls = ['cell'];
+  if (s.text) cls.push('text', id);
+  if (isGold(entry)) cls.push('gold');
+  if (id === 'wild') cls.push('wild');
   const inner = id === 'bar' ? `<span class="glyph">BAR</span>` : s.icon;
-  return `<div class="cell${s.text ? ' text ' + id : ''}" data-sym="${id}">${inner}</div>`;
+  const lvl = run && run.levels[id] ? `<span class="lvl">+${run.levels[id]}</span>` : '';
+  return `<div class="${cls.join(' ')}" data-sym="${id}">${inner}${lvl}</div>`;
 }
 
 function cellSize() { return el.reels[0].clientHeight / ROWS; }
@@ -103,11 +133,16 @@ function applyDark(reveal = false) {
   }
 }
 
+function renderMoney() {
+  el.money.textContent = `£${run.money}`;
+  el.barMoney.textContent = `£${run.money}`;
+}
+
 function renderHUD() {
   const i = info();
   el.pint.textContent = `Pint ${i.pint}`;
   el.kind.textContent = i.boss ? `Landlord · Round ${i.round}` : `${i.kind.name} · Round ${i.round}`;
-  el.money.textContent = `£${run.money}`;
+  renderMoney();
   el.target.textContent = i.target;
   el.spins.textContent = run.spinsLeft;
   el.holds.textContent = run.holdsLeft;
@@ -138,6 +173,30 @@ function renderHUD() {
   el.seed.textContent = `Seed ${run.seed}`;
 }
 
+function regBadge(r) {
+  const s = r.state;
+  if (r.id === 'quentin' && s.bank) return `+${s.bank}`;
+  if (r.id === 'bore' && s.m) return `+${s.m}`;
+  if (r.id === 'guvnor') return `×${(1.5 + 0.5 * (s.b || 0)).toFixed(1)}`;
+  if (r.id === 'kath' && s.sell) return `£${sellValue(r)}`;
+  return '';
+}
+
+function renderRegulars(container, where) {
+  const cards = [];
+  for (let i = 0; i < MAX_REGULARS; i++) {
+    const r = run.regulars[i];
+    if (!r) { cards.push(`<div class="reg-card empty"></div>`); continue; }
+    const d = REG_BY_ID[r.id];
+    const b = regBadge(r);
+    cards.push(`<button class="reg-card" data-slot="${i}" style="--rc:${RARITY[d.rarity].colour}">
+      <span class="face">${d.face}</span><span class="nm">${d.name}</span>${b ? `<span class="badge">${b}</span>` : ''}</button>`);
+  }
+  container.innerHTML = cards.join('');
+  container.querySelectorAll('.reg-card[data-slot]').forEach((c) =>
+    c.addEventListener('click', () => openRegularSheet(Number(c.dataset.slot), where)));
+}
+
 function renderControls() {
   const phase = busy ? 'busy' : run.phase === 'nudge' ? 'nudge' : 'ready';
   el.game.dataset.phase = phase;
@@ -165,8 +224,14 @@ function applyTheme() {
 
 function renderAll() {
   renderHUD();
+  renderRegulars(el.regs, 'game');
   renderReelsStatic();
   renderControls();
+}
+
+function showScreen(name) {
+  for (const s of [el.title, el.game, el.barScreen]) s.classList.remove('active');
+  ({ title: el.title, game: el.game, bar: el.barScreen })[name].classList.add('active');
 }
 
 // ---------- Spin animation ----------
@@ -221,11 +286,10 @@ async function animateNudge(i, dir) {
   const node = el.reels[i].querySelector('.strip');
   const strip = run.reels[i];
   const n = strip.length;
-  const oldStop = (run.stops[i] + dir + n) % n;   // state already moved
+  const oldStop = (run.stops[i] + dir + n) % n;
   const oldVis = visibleOnReel(strip, oldStop);
   node.style.transition = 'none';
   if (dir > 0) {
-    // Reel moves down: a new symbol comes in at the top.
     const incoming = strip[(run.stops[i] - 1 + n) % n];
     node.innerHTML = [incoming, ...oldVis].map(cellHTML).join('');
     node.style.transform = `translateY(${-size}px)`;
@@ -270,6 +334,7 @@ async function onNudge(i, dir) {
   A.sfx.nudge();
   A.buzz(8);
   renderHUD();
+  renderRegulars(el.regs, 'game');   // the Pub Bore grows
   await animateNudge(i, dir);
   busy = false;
   save();
@@ -328,6 +393,7 @@ async function doCollect() {
   renderControls();
   const result = G.collect(run);
   await playResult(result);
+  renderRegulars(el.regs, 'game');
   save();
 
   if (run.phase === 'cleared') {
@@ -349,6 +415,20 @@ function clearHighlights() {
   el.paylines.forEach((p) => p.classList.remove('on', 'blocked'));
 }
 
+function popRegular(slot, effect) {
+  const card = el.regs.querySelector(`.reg-card[data-slot="${slot}"]`);
+  if (!card) return;
+  card.classList.remove('trigger');
+  void card.offsetWidth;
+  card.classList.add('trigger');
+  const pop = document.createElement('span');
+  const kind = effect.text ? 'note' : effect.xmult ? 'xmult' : effect.mult ? 'mult' : effect.money ? 'money' : 'coins';
+  pop.className = 'reg-pop ' + kind;
+  pop.textContent = describeEffect(effect);
+  card.appendChild(pop);
+  setTimeout(() => pop.remove(), 1000);
+}
+
 async function playResult(result) {
   const i = info();
   setCalc(0, 1);
@@ -362,55 +442,62 @@ async function playResult(result) {
     el.paylines.forEach((p) => p.classList.remove('blocked'));
   }
 
-  if (result.voided) {
+  if (result.voided && result.voidedWins.length) {
     A.sfx.wrong();
     FX.shake(el.machine);
     A.buzz([60, 40, 60]);
     say('The Quiz Master buzzes you off.');
     await FX.stamp('WRONG ANSWER!', '#ff4b3a', 1200);
-    return;
   }
 
   if (!result.wins.length) {
-    A.sfx.blank();
-    say(pick(BLANK_LINES));
+    // Regulars can still react to a losing spin (Quentin banks Mult).
+    for (const st of result.steps) { popRegular(st.slot, st.effect); A.sfx.tick(); await sleep(450); }
+    if (!result.voided) { A.sfx.blank(); say(pick(BLANK_LINES)); }
     return;
   }
 
   el.reels.forEach((r) => r.querySelectorAll('.cell').forEach((c) => c.classList.add('dim')));
-  let coins = 0;
-  let mult = 1;
-  let step = 0;
-  for (const w of result.wins) {
-    const row = w.line.cells[0][0];
-    el.paylines[row].classList.add('on');
-    for (const [r, c] of w.cells) {
-      const node = cellAt(r, c);
-      node.classList.remove('dim');
-      node.classList.add('win');
-      FX.burstFrom(node, w.count === 3 ? 8 : 3, 'coin', 0.8);
+  let lineNo = 0;
+  let prevMult = 1;
+  for (const st of result.steps) {
+    if (st.kind === 'line') {
+      const w = st.win;
+      el.paylines.forEach((p) => p.classList.remove('on'));
+      el.paylines[w.line.cells[0][0]].classList.add('on');
+      for (const [r, c] of w.cells) {
+        const node = cellAt(r, c);
+        node.classList.remove('dim');
+        node.classList.add('win');
+        FX.burstFrom(node, w.count === 3 ? 8 : 3, 'coin', 0.8);
+      }
+      const taxed = w.rawCoins > w.coins ? ` (Taxman took ${w.rawCoins - w.coins})` : '';
+      const gold = w.goldCount ? ' ✨' : '';
+      say(`${w.count}× ${w.symbol.name}${gold}, ${w.line.name}${taxed}`);
+      setCalc(st.coins, st.mult);
+      bump(el.coins);
+      if (st.mult !== prevMult) bump(el.mult);
+      A.sfx.win(lineNo++);
+      A.sfx.coin();
+      await sleep(420);
+    } else {
+      popRegular(st.slot, st.effect);
+      setCalc(st.coins, st.mult);
+      const e = st.effect;
+      if (e.xmult) { el.mult.classList.remove('xm'); void el.mult.offsetWidth; el.mult.classList.add('xm'); A.sfx.mult(); A.sfx.mult(); FX.shake(el.calc); }
+      else if (e.mult) { bump(el.mult); A.sfx.mult(); }
+      else if (e.coins) { bump(el.coins); A.sfx.coin(); }
+      else if (e.money) { A.sfx.cash(); }
+      else A.sfx.tick();
+      await sleep(e.xmult ? 520 : 380);
     }
-    const taxed = w.rawCoins > w.coins ? ` (Taxman took ${w.rawCoins - w.coins})` : '';
-    say(`${w.count}× ${w.symbol.name}, ${w.line.name}${taxed}`);
-    coins += w.coins;
-    setCalc(coins, mult);
-    bump(el.coins);
-    A.sfx.win(step++);
-    A.sfx.coin();
-    await sleep(380);
-    if (w.mult) {
-      mult += w.mult;
-      setCalc(coins, mult);
-      bump(el.mult);
-      A.sfx.mult();
-      await sleep(320);
-    }
-    el.paylines[row].classList.remove('on');
+    prevMult = st.mult;
   }
+  el.paylines.forEach((p) => p.classList.remove('on'));
 
   const total = result.total;
   say(`+${total}`, true);
-  const big = mult >= 4 || result.wins.length >= 2 || total >= i.target * 0.5;
+  const big = result.mult >= 6 || result.wins.length >= 2 || total >= i.target * 0.5;
 
   if (result.onFire) {
     el.bar.classList.add('on-fire');
@@ -442,7 +529,7 @@ function hot() {
 }
 
 async function tickScore(amount) {
-  const start = run.score - amount;   // collect() already added it
+  const start = run.score - amount;
   const steps = Math.min(20, amount);
   for (let k = 1; k <= steps; k++) {
     const shown = Math.round(start + (amount * k) / steps);
@@ -456,8 +543,8 @@ async function tickScore(amount) {
   renderHUD();
 }
 
-// ---------- Round flow ----------
-function showOverlay({ face = null, kicker = '', title, body, btn, slam = false, titleClass = '' }) {
+// ---------- Overlays ----------
+function showOverlay({ face = null, kicker = '', title, body, btn, slam = false, titleClass = '', foot = '' }) {
   return new Promise((resolve) => {
     el.oFace.classList.toggle('hidden', !face);
     el.oFace.textContent = face || '';
@@ -465,6 +552,7 @@ function showOverlay({ face = null, kicker = '', title, body, btn, slam = false,
     el.oTitle.textContent = title;
     el.oTitle.className = titleClass;
     el.oBody.innerHTML = body;
+    el.oFoot.innerHTML = foot;
     el.oBtn.textContent = btn;
     el.panel.classList.remove('slam');
     void el.panel.offsetWidth;
@@ -488,6 +576,7 @@ function bossPreviewHTML(boss, label) {
 async function roundIntro() {
   const i = info();
   busy = true;
+  showScreen('game');
   renderAll();
   if (i.boss) {
     A.sfx.slam();
@@ -508,12 +597,14 @@ async function roundIntro() {
     const tip = i.round === 1
       ? `<p class="muted">After a spin, NUDGE reels up or down, then COLLECT. Before a spin, HOLD reels to keep them.</p>`
       : '';
+    const b = bossRound.boss;
     await showOverlay({
       kicker: `Pint ${i.pint} · Round ${i.round}`,
       title: i.kind.name,
-      body: `<p>Score <b>${i.target}</b> in <b>${run.spinsLeft}</b> spins.</p>${tip}
-             ${bossPreviewHTML(bossRound.boss, 'Landlord this Pint')}`,
+      body: `<p>Score <b>${i.target}</b> in <b>${run.spinsLeft}</b> spins.</p>${tip}`,
       btn: i.round === 1 ? 'Insert coin' : 'Spin up',
+      foot: `<div class="rumour"><span class="boss-face">${b.face}</span>
+        <span>Word at the bar: the Landlord in <b>Round ${bossRound.round}</b> is <b>${b.name}</b>. ${b.rule}</span></div>`,
     });
   }
   busy = false;
@@ -538,13 +629,7 @@ async function roundCleared() {
   A.sfx.clear();
   const pay = G.payout(run);
   setBest(run.round);
-  const next = G.roundInfo(run, run.round + 1);
-  let nextHTML = '';
-  if (!i.isFinal) {
-    nextHTML = next.boss
-      ? bossPreviewHTML(next.boss, 'Up next, the Landlord')
-      : `<p class="muted">Next: ${next.kind.name}, Pint ${next.pint}. Target ${next.target}.</p>`;
-  }
+  const regRows = pay.regs.map((x) => `<tr><td>${REG_BY_ID[run.regulars[x.slot].id].name}</td><td>£${x.money}</td></tr>`).join('');
   await showOverlay({
     kicker: `Pint ${i.pint} · Round ${i.round}`,
     title: i.boss ? 'Landlord beaten!' : 'Round cleared!',
@@ -552,23 +637,18 @@ async function roundCleared() {
       <table class="pay-table">
         <tr><td>${i.kind.name} reward</td><td>£${pay.reward}</td></tr>
         <tr><td>Spare spins (${pay.spare})</td><td>£${pay.spare}</td></tr>
-        <tr><td>Interest</td><td>£${pay.interest}</td></tr>
+        <tr><td>Interest (£1 per £5, max £5)</td><td>£${pay.interest}</td></tr>
+        ${regRows}
         <tr class="total"><td>Total</td><td>£${pay.total}</td></tr>
-      </table>
-      <p class="muted">The Bar opens in the next update, so hang on to your money.</p>
-      ${nextHTML}`,
-    btn: i.isFinal ? 'Last orders' : 'Next round',
+      </table>`,
+    btn: i.isFinal ? 'Last orders' : 'To the Bar',
   });
   A.sfx.cash();
   const res = G.advance(run);
-  bump(el.money);
   if (res.won) return victory();
   save();
   el.bar.classList.remove('on-fire');
-  applyTheme();
-  clearHighlights();
-  setCalc(0, 1);
-  await roundIntro();
+  enterBar();
 }
 
 function statsHTML() {
@@ -577,7 +657,7 @@ function statsHTML() {
     <div><b>${info().pint}</b>Pint reached</div>
     <div><b>${s.bossesBeaten}</b>Landlords beaten</div>
     <div><b>${s.bestSpin}</b>Best spin</div>
-    <div><b>${s.totalSpins}</b>Spins</div>
+    <div><b>${run.regulars.length}</b>Regulars</div>
   </div><p class="muted">Seed ${run.seed}</p>`;
 }
 
@@ -619,12 +699,268 @@ async function victory() {
   startRun(G.newRun(randomSeed()));
 }
 
+// ---------- The Bar ----------
+function enterBar() {
+  document.body.classList.remove('boss');
+  [...document.body.classList].filter((c) => c.startsWith('rule-')).forEach((c) => document.body.classList.remove(c));
+  A.setBossMode(false);
+  A.setMuffled(true);
+  showScreen('bar');
+  renderBar();
+  el.barScreen.querySelector('.bar-scroll').scrollTop = 0;
+  const p = run.bar.pending;
+  if (p?.kind === 'packet') openPacket(p);
+  if (p?.kind === 'scratch') openPicker(p.id, (r, k) => S.applyScratch(run, p.id, r, k), () => S.cancelScratch(run));
+}
+
+function itemCardHTML(item, idx, kind) {
+  const inf = S.itemInfo(item);
+  const textIcon = item.type === 'mat' && SYMBOLS[item.id].text;
+  const cant = !item.sold && run.money < item.price;
+  return `<button class="item${item.sold ? ' sold' : ''}${cant ? ' cant' : ''}" data-kind="${kind}" data-idx="${idx}" style="--ic:${inf.colour}">
+    <span class="tag">${inf.tag}</span>
+    <span class="ic${textIcon ? ' text' : ''}">${inf.icon}</span>
+    <span class="nm">${inf.name}</span>
+    <span class="price">£${item.price}</span>
+  </button>`;
+}
+
+function renderBar() {
+  const nx = info();
+  el.barNext.textContent = nx.boss ? `Next: the Landlord (${nx.boss.name})` : `Next: ${nx.kind.name}, target ${nx.target}`;
+  renderMoney();
+  renderRegulars(el.barRegs, 'bar');
+  el.barRegCount.textContent = `${run.regulars.length} / ${MAX_REGULARS}`;
+  el.stock.innerHTML = run.bar.items.map((it, i) => itemCardHTML(it, i, 'item')).join('');
+  el.packets.innerHTML = run.bar.packets.map((it, i) => itemCardHTML(it, i, 'packet')).join('');
+  [...el.stock.children, ...el.packets.children].forEach((b) =>
+    b.addEventListener('click', () => openItemSheet(b.dataset.kind, Number(b.dataset.idx))));
+  el.restock.textContent = `Restock £${run.bar.rerollCost}`;
+  el.restock.disabled = run.money < run.bar.rerollCost;
+
+  const lv = Object.entries(run.levels).filter(([, n]) => n > 0);
+  el.levels.innerHTML = lv.length
+    ? lv.map(([id, n]) => `<span class="level-chip">${SYMBOLS[id].text ? SYMBOLS[id].name : SYMBOLS[id].icon} <b>Lv ${n + 1}</b></span>`).join('')
+    : `<p class="hint">No Beer Mats yet. Each one levels up a symbol.</p>`;
+}
+
+function openSheet({ face, faceText = false, tag, tagColour, name, desc, status = '', actions }) {
+  el.sheetFace.textContent = face;
+  el.sheetFace.classList.toggle('text', faceText);
+  el.sheetTag.textContent = tag;
+  el.sheetTag.style.color = tagColour || '';
+  el.sheetName.textContent = name;
+  el.sheetDesc.textContent = desc;
+  el.sheetStatus.textContent = status;
+  el.sheetActions.innerHTML = '';
+  for (const a of actions) {
+    const b = document.createElement('button');
+    b.className = a.cls || 'small-btn';
+    b.textContent = a.label;
+    b.disabled = !!a.disabled;
+    b.addEventListener('click', () => a.onClick(b));
+    el.sheetActions.appendChild(b);
+  }
+  el.sheet.classList.remove('hidden');
+}
+function closeSheet() { el.sheet.classList.add('hidden'); }
+
+function regStatus(slot) {
+  const r = run.regulars[slot];
+  const d = REG_BY_ID[r.id];
+  if (d.copies) {
+    const right = run.regulars[slot + 1];
+    if (!right) return 'Copying: nobody (put someone to his right)';
+    const rd = REG_BY_ID[right.id];
+    return rd.copies ? 'Copying: another Barman, which does nothing' : `Copying: ${rd.name}`;
+  }
+  return d.status ? d.status(r.state) : '';
+}
+
+function openRegularSheet(slot, where) {
+  const r = run.regulars[slot];
+  if (!r) return;
+  const d = REG_BY_ID[r.id];
+  const rar = RARITY[d.rarity];
+  const actions = [];
+  if (where === 'bar') {
+    actions.push({ label: '◀', disabled: slot === 0, onClick: () => { S.move(run, slot, -1); A.sfx.nudge(); save(); renderBar(); openRegularSheet(slot - 1, where); } });
+    actions.push({ label: '▶', disabled: slot >= run.regulars.length - 1, onClick: () => { S.move(run, slot, 1); A.sfx.nudge(); save(); renderBar(); openRegularSheet(slot + 1, where); } });
+    actions.push({
+      label: `Sell £${sellValue(r)}`, cls: 'small-btn sell',
+      onClick: (btn) => {
+        if (!btn.dataset.armed) { btn.dataset.armed = '1'; btn.textContent = 'Tap again to sell'; return; }
+        const v = S.sell(run, slot);
+        A.sfx.cash();
+        toast(`${d.name} left the pub. +£${v}`);
+        save(); closeSheet(); renderBar();
+      },
+    });
+  }
+  actions.push({ label: 'Close', cls: 'big-btn', onClick: closeSheet });
+  openSheet({
+    face: d.face, tag: `${rar.name} Regular · slot ${slot + 1}`, tagColour: rar.colour, name: d.name, desc: d.desc,
+    status: regStatus(slot) || (where === 'game' ? 'Rearrange your Regulars at the Bar.' : ''),
+    actions,
+  });
+}
+
+function openItemSheet(kind, idx) {
+  const item = (kind === 'packet' ? run.bar.packets : run.bar.items)[idx];
+  if (!item || item.sold) return;
+  const inf = S.itemInfo(item);
+  let reason = '';
+  if (run.money < item.price) reason = `You need £${item.price - run.money} more.`;
+  else if (item.type === 'regular' && run.regulars.length >= MAX_REGULARS) reason = 'No room at the machine. Sell a Regular first.';
+  let status = reason;
+  if (item.type === 'mat') status = status || `${SYMBOLS[item.id].name} is level ${(run.levels[item.id] || 0) + 1} now.`;
+  openSheet({
+    face: inf.icon, faceText: item.type === 'mat' && SYMBOLS[item.id].text,
+    tag: inf.tag, tagColour: inf.colour, name: inf.name, desc: inf.desc, status,
+    actions: [
+      { label: 'Not now', onClick: closeSheet },
+      { label: `Buy £${item.price}`, cls: 'big-btn', disabled: !!reason, onClick: () => { closeSheet(); buyItem(kind, idx); } },
+    ],
+  });
+}
+
+function bought(text) {
+  A.sfx.cash();
+  A.buzz(15);
+  bump(el.barMoney);
+  if (text) toast(text);
+  save();
+  renderBar();
+}
+
+function buyItem(kind, idx) {
+  const item = (kind === 'packet' ? run.bar.packets : run.bar.items)[idx];
+  if (item.type === 'scratch' && S.SCRATCH_BY_ID[item.id].target) {
+    // Choose the target first; only pay once it's applied.
+    openPicker(item.id, (r, k) => {
+      const res = S.buy(run, kind, idx);
+      if (!res.ok) return false;
+      return S.applyScratch(run, item.id, r, k);
+    });
+    return;
+  }
+  const res = S.buy(run, kind, idx);
+  if (!res.ok) { A.sfx.denied(); toast(res.reason); return; }
+  if (res.packet) { bought(); openPacket(res.packet); return; }
+  if (res.dip) { bought(res.dip.text); return; }
+  if (item.type === 'mat') {
+    FX.burstFrom(el.levels, 20, 'coin', 0.8);
+    bought(`${SYMBOLS[item.id].name} levelled up!`);
+    return;
+  }
+  FX.burstFrom(el.barRegs, 18, 'confetti', 0.8);
+  bought(`${REG_BY_ID[item.id].name} joins you at the machine.`);
+}
+
+// ---------- Reel picker ----------
+let pickerDone = null;
+function chipHTML(entry, r, k, enabled) {
+  const id = baseId(entry);
+  const s = SYMBOLS[id];
+  const cls = ['chip'];
+  if (s.text) cls.push('text', id);
+  if (isGold(entry)) cls.push('gold');
+  if (id === 'wild') cls.push('wild');
+  const label = id === 'bar' ? 'BAR' : s.icon;
+  return `<button class="${cls.join(' ')}" data-r="${r}" data-k="${k}" ${enabled ? '' : 'disabled'} aria-label="${s.name}">${label}</button>`;
+}
+
+function openPicker(scratchId, onApply, onCancel = null) {
+  const view = !scratchId;
+  const card = scratchId ? S.SCRATCH_BY_ID[scratchId] : null;
+  el.pickerPanel.classList.toggle('view', view);
+  el.pickerKicker.textContent = view ? 'Your machine' : `Scratchcard · ${card.icon} ${card.name}`;
+  el.pickerTitle.textContent = view ? 'Your reels' : 'Pick a symbol';
+  el.pickerSub.textContent = view ? 'Every symbol on each reel strip. More copies means it lands more often.' : card.desc;
+  el.pickerReels.innerHTML = run.reels.map((strip, r) =>
+    `<div class="picker-row"><div class="lbl">Reel ${r + 1} · ${strip.length} symbols</div><div class="chips">${
+      strip.map((e, k) => chipHTML(e, r, k, view || S.canTarget(run, scratchId, r, k))).join('')}</div></div>`).join('');
+  el.pickerCancel.textContent = view ? 'Close' : 'Cancel';
+  pickerDone = onCancel;
+  if (!view) {
+    el.pickerReels.querySelectorAll('.chip:not(:disabled)').forEach((c) => c.addEventListener('click', () => {
+      const r = Number(c.dataset.r), k = Number(c.dataset.k);
+      const name = SYMBOLS[baseId(run.reels[r][k])].name;
+      if (onApply(r, k) === false) { A.sfx.denied(); toast('Couldn\'t do that.'); return; }
+      el.picker.classList.add('hidden');
+      pickerDone = null;
+      FX.flash('#ffe9a6', 300);
+      A.sfx.coin();
+      const verb = { gold: `Gilded a ${name}`, copy: `Copied a ${name}`, bin: `Binned a ${name}`, wild: `${name} turned Wild` }[scratchId];
+      bought(`${verb} on reel ${r + 1}.`);
+    }));
+  }
+  el.picker.classList.remove('hidden');
+}
+
+// ---------- Crisp packets ----------
+function openPacket(pending) {
+  const pk = S.PACKET_BY_ID[pending.id];
+  el.packetBag.textContent = pk.icon;
+  el.packetBag.classList.remove('open');
+  el.packetTitle.textContent = pk.name;
+  A.sfx.spin();
+  el.packetChoices.innerHTML = '';
+  el.packet.classList.remove('hidden');
+  setTimeout(() => {
+    el.packetBag.classList.add('open');
+    A.sfx.shatter();
+    FX.burstFrom(el.packetBag, 24, 'confetti', 0.9);
+    el.packetChoices.innerHTML = pending.choices.map((c, i) => {
+      const inf = S.itemInfo(c);
+      const textIcon = c.type === 'mat' && SYMBOLS[c.id].text;
+      return `<button class="item" data-i="${i}" style="--ic:${inf.colour}">
+        <span class="tag">${inf.tag}</span><span class="ic${textIcon ? ' text' : ''}">${inf.icon}</span>
+        <span class="nm">${inf.name}</span><span class="desc">${inf.desc}</span></button>`;
+    }).join('');
+    el.packetChoices.querySelectorAll('.item').forEach((b) => b.addEventListener('click', () => choosePacket(pending, Number(b.dataset.i))));
+  }, 1400);
+}
+
+function choosePacket(pending, ci) {
+  const c = pending.choices[ci];
+  if (c.type === 'regular' && run.regulars.length >= MAX_REGULARS) {
+    A.sfx.denied();
+    toast('No room at the machine. Skip, or sell one first.');
+    return;
+  }
+  if (c.type === 'scratch' && S.SCRATCH_BY_ID[c.id].target) {
+    el.packet.classList.add('hidden');
+    openPicker(c.id, (r, k) => {
+      const res = S.pickFromPacket(run, ci);
+      if (!res.ok) return false;
+      return S.applyScratch(run, c.id, r, k);
+    }, () => el.packet.classList.remove('hidden'));
+    return;
+  }
+  const res = S.pickFromPacket(run, ci);
+  if (!res.ok) { A.sfx.denied(); toast(res.reason); return; }
+  el.packet.classList.add('hidden');
+  if (res.dip) return bought(res.dip.text);
+  if (c.type === 'mat') return bought(`${SYMBOLS[c.id].name} levelled up!`);
+  bought(`${REG_BY_ID[c.id].name} joins you at the machine.`);
+}
+
+function leaveBar() {
+  if (el.sheet.classList.contains('hidden') === false) closeSheet();
+  G.leaveBar(run);
+  save();
+  A.setMuffled(false);
+  applyTheme();
+  clearHighlights();
+  setCalc(0, 1);
+  roundIntro();
+}
+
 // ---------- Start / resume ----------
 async function startRun(r, resumed = false) {
   run = r;
   busy = false;
-  el.title.classList.remove('active');
-  el.game.classList.add('active');
   applyTheme();
   clearHighlights();
   setCalc(0, 1);
@@ -632,7 +968,8 @@ async function startRun(r, resumed = false) {
   save();
   if (!resumed) return roundIntro();
 
-  // Resuming: pick up exactly where they left off.
+  if (run.phase === 'bar') return enterBar();
+  showScreen('game');
   if (run.phase === 'spinning') run.phase = run.nudgesLeft > 0 ? 'nudge' : 'scoring';
   renderAll();
   if (run.phase === 'cleared') { busy = true; renderControls(); return roundCleared(); }
@@ -671,7 +1008,8 @@ function openSettings() {
 }
 function closeSettings() {
   el.settings.classList.add('hidden');
-  if (el.overlay.classList.contains('hidden')) A.setMuffled(false);
+  const inBar = el.barScreen.classList.contains('active');
+  if (el.overlay.classList.contains('hidden') && !inBar) A.setMuffled(false);
 }
 
 function bindSettings() {
@@ -689,22 +1027,23 @@ function bindSettings() {
   [el.volMusic, el.volAmb, el.volSfx, el.optReduced, el.optVibe].forEach((n) => n.addEventListener('input', onChange));
   el.volSfx.addEventListener('change', () => A.sfx.coin());
   el.settingsBtn.addEventListener('click', () => { A.unlock(); openSettings(); });
+  el.barSettingsBtn.addEventListener('click', () => { A.unlock(); openSettings(); });
   el.settingsClose.addEventListener('click', closeSettings);
   el.abandon.addEventListener('click', () => {
     if (!confirm('Abandon this run? It can\'t be undone.')) return;
     clearSave();
     closeSettings();
-    el.overlay.classList.add('hidden');
+    [el.overlay, el.sheet, el.picker, el.packet].forEach((o) => o.classList.add('hidden'));
     document.body.className = settings.reducedFx ? 'reduced-fx' : '';
     A.setBossMode(false);
-    el.game.classList.remove('active');
-    el.title.classList.add('active');
+    A.setMuffled(false);
+    showScreen('title');
     el.start.textContent = 'Tap to Play';
     el.newRun.classList.add('hidden');
     el.best.textContent = bestText();
   });
   el.credits.innerHTML = CREDITS.map((c) => `<li><b>${c.what}:</b> ${c.who}</li>`).join('') +
-    '<li><b>Game:</b> Tilt by Sam Elstone</li>';
+    '<li><b>Game:</b> Tilt by Samderverse</li>';
 }
 
 // ---------- Boot ----------
@@ -723,7 +1062,7 @@ function boot() {
     el.newRun.classList.remove('hidden');
   }
 
-  // Test shortcuts: ?round=3 starts at that round, ?boss=uncle forces that Landlord, ?money=50
+  // Test shortcuts: ?round=3, ?boss=uncle, ?money=50, ?regs=penny,jen, ?bar=1 (open the Bar first)
   const debugRun = () => {
     const r = G.newRun((forcedSeed || randomSeed()).toUpperCase());
     const boss = params.get('boss');
@@ -733,17 +1072,19 @@ function boot() {
       r.round = round;
       const pint = Math.ceil(round / 3);
       if (boss) r.bossOrder = Array(pint - 1).fill(r.bossOrder[1]).concat(r.bossOrder);
-      G.startRound(r);
     }
     if (params.get('money')) r.money = Number(params.get('money'));
+    if (params.get('regs')) params.get('regs').split(',').filter((id) => REG_BY_ID[id]).slice(0, MAX_REGULARS).forEach((id) => S.addRegular(r, id));
+    G.startRound(r);
+    if (params.get('bar')) { S.openBar(r); r.phase = 'bar'; }
     return r;
   };
-  const isDebug = forcedSeed || params.get('round') || params.get('boss');
+  const isDebug = ['seed', 'round', 'boss', 'money', 'regs', 'bar'].some((k) => params.has(k));
 
   el.start.addEventListener('click', () => {
     A.unlock();
     A.playMusic('main');
-    if (isDebug) startRun(debugRun());
+    if (isDebug) { const r = debugRun(); startRun(r, r.phase === 'bar'); }
     else if (saved) startRun(saved, true);
     else startRun(G.newRun(randomSeed()));
   });
@@ -763,6 +1104,30 @@ function boot() {
     const b = info().boss;
     if (b) { say(`${b.name}: ${b.rule}`); FX.shake(el.bossStrip); }
   });
+
+  // Bar controls
+  el.restock.addEventListener('click', () => {
+    if (!S.reroll(run)) { A.sfx.denied(); return; }
+    A.sfx.spin();
+    save();
+    renderBar();
+    el.stock.querySelectorAll('.item').forEach((n) => { n.style.animation = 'deal .4s cubic-bezier(.2,1.3,.4,1) both'; });
+  });
+  el.viewReels.addEventListener('click', () => openPicker(null, null));
+  el.pickerCancel.addEventListener('click', () => {
+    el.picker.classList.add('hidden');
+    const cb = pickerDone;
+    pickerDone = null;
+    if (cb) cb();
+  });
+  el.packetSkip.addEventListener('click', () => {
+    S.pickFromPacket(run, null);
+    el.packet.classList.add('hidden');
+    save();
+    renderBar();
+  });
+  el.leaveBar.addEventListener('click', () => { A.unlock(); leaveBar(); });
+  el.sheet.addEventListener('click', (e) => { if (e.target === el.sheet) closeSheet(); });
 
   // Desktop testing: Space spins/collects, 1-3 hold, Q/A W/S E/D nudge.
   window.addEventListener('keydown', (e) => {

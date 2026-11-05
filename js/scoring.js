@@ -1,6 +1,6 @@
-import { SYMBOLS } from './symbols.js';
+import { SYMBOLS, baseId, isGold, LEVEL_COINS, LEVEL_MULT } from './symbols.js';
 
-// Win lines as [row, col] cells. Diagonals etc. can be unlocked later.
+// Win lines as [row, col] cells.
 export const LINES = [
   { id: 'top',    name: 'Top line',    cells: [[0, 0], [0, 1], [0, 2]] },
   { id: 'middle', name: 'Middle line', cells: [[1, 0], [1, 1], [1, 2]] },
@@ -9,36 +9,55 @@ export const LINES = [
 
 export const BASE_MULT = 1;
 
-// Score one grid. Returns a step-by-step breakdown so the UI can animate it.
+// Work out which lines win on a grid of strip entries.
+// ctx:
+//   aliases:     { lemon: 'cherry' } (from Regulars like Dodgy Dave)
+//   levels:      Beer Mat levels per symbol id
+//   lines:       allowed line ids (boss)
+//   symbolCoins: (id, coins) => coins (boss)
+//   coinFactor:  multiplier on each win's coins (boss)
+//
 // Rules:
-//   3 matching on a line  -> 3 x symbol coins, + symbol mult
-//   2 matching from the left (pub-machine style) -> 1 x symbol coins, no mult
-// mods (from boss rules, later regulars):
-//   lines:       array of allowed line ids
-//   symbolCoins: (id, base) => coins
-//   coinFactor:  multiplier applied to each win's coins
-export function evaluate(grid, mods = {}) {
+//   3 matching on a line -> each cell's coins added up, + symbol mult (+ level)
+//   2 matching from the left (pub-machine style) -> one symbol's coins, no mult
+//   Wilds match anything. Gold cells are worth double coins.
+export function findWins(grid, ctx = {}) {
+  const alias = (id) => (ctx.aliases && ctx.aliases[id]) || id;
+  const levels = ctx.levels || {};
   const wins = [];
   const blocked = [];
-  const coinsOf = (sym) => (mods.symbolCoins ? mods.symbolCoins(sym.id, sym.coins) : sym.coins);
-  const factor = mods.coinFactor ?? 1;
 
   for (const line of LINES) {
-    const ids = line.cells.map(([r, c]) => grid[r][c]);
-    const sym = SYMBOLS[ids[0]];
-    let win = null;
-    if (ids[0] === ids[1] && ids[1] === ids[2]) {
-      win = { line, symbol: sym, count: 3, coins: coinsOf(sym) * 3, mult: sym.mult, cells: line.cells };
-    } else if (ids[0] === ids[1]) {
-      win = { line, symbol: sym, count: 2, coins: coinsOf(sym), mult: 0, cells: line.cells.slice(0, 2) };
+    const entries = line.cells.map(([r, c]) => grid[r][c]);
+    const ids = entries.map((e) => alias(baseId(e)));
+    const symId = ids.find((id) => id !== 'wild') || 'wild';
+    let count = 0;
+    while (count < 3 && (ids[count] === symId || ids[count] === 'wild')) count++;
+    if (count < 2) continue;
+
+    const sym = SYMBOLS[symId];
+    const lvl = levels[symId] || 0;
+    let unit = sym.coins + lvl * LEVEL_COINS;
+    if (ctx.symbolCoins) unit = ctx.symbolCoins(symId, unit);
+    const cells = line.cells.slice(0, count);
+    const cellEntries = entries.slice(0, count);
+    const goldCount = cellEntries.filter(isGold).length;
+    const wildCount = cellEntries.filter((e) => baseId(e) === 'wild').length;
+
+    let coins;
+    let mult;
+    if (count === 3) {
+      coins = cellEntries.reduce((s, e) => s + unit * (isGold(e) ? 2 : 1), 0);
+      mult = sym.mult + lvl * LEVEL_MULT;
+    } else {
+      coins = unit * (goldCount ? 2 : 1);
+      mult = 0;
     }
-    if (!win) continue;
-    if (mods.lines && !mods.lines.includes(line.id)) { blocked.push(win); continue; }
-    win.rawCoins = win.coins;
-    win.coins = Math.floor(win.coins * factor);
+
+    const win = { line, symbol: sym, count, coins, rawCoins: coins, mult, cells, entries: cellEntries, goldCount, wildCount, level: lvl };
+    if (ctx.lines && !ctx.lines.includes(line.id)) { blocked.push(win); continue; }
+    if (ctx.coinFactor != null) win.coins = Math.floor(win.coins * ctx.coinFactor);
     wins.push(win);
   }
-  const coins = wins.reduce((s, w) => s + w.coins, 0);
-  const mult = BASE_MULT + wins.reduce((s, w) => s + w.mult, 0);
-  return { wins, blocked, coins, mult, total: wins.length ? coins * mult : 0 };
+  return { wins, blocked };
 }
