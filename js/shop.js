@@ -1,11 +1,12 @@
 // The Bar: everything you can buy between rounds. Pure logic, no DOM.
 import { makeRng } from './rng.js';
 import { SYMBOLS, BASE_SYMBOLS, baseId, isGold } from './symbols.js';
-import { REGULARS, REG_BY_ID, RARITY, MAX_REGULARS, priceOf, sellValue } from './regulars.js';
+import { REGULARS, REG_BY_ID, RARITY, maxRegulars, priceOf, sellValue } from './regulars.js';
 
-export const MAT_PRICE = 3;
-export const SCRATCH_PRICE = 3;
-export const PACKET_PRICE = 4;
+// Prices scale with power. Beer Mats get £1 dearer for each level that symbol already has.
+export const MAT_BASE_PRICE = 3;
+export const matPrice = (run, id) => MAT_BASE_PRICE + (run.levels[id] || 0);
+export const RESTOCK_START = 2;
 export const MIN_STRIP = 6;
 export const MAX_STRIP = 20;
 
@@ -17,21 +18,41 @@ export const MATS = BASE_SYMBOLS.map((id) => ({
 
 // ---------- Scratchcards (edit your reels) ----------
 export const SCRATCHCARDS = [
-  { id: 'gold', name: 'Gold Leaf', icon: '✨', desc: 'Gild a symbol on a reel. Gold symbols score double Coins, and glow through a Power Cut when everything else goes dark.', target: true },
-  { id: 'copy', name: 'Photocopier', icon: '📠', desc: 'Copy a symbol on a reel, so it turns up more often.', target: true },
-  { id: 'bin', name: 'Bin Bag', icon: '🗑️', desc: 'Throw a symbol off a reel to thin out the junk.', target: true },
-  { id: 'wild', name: 'Wild Card', icon: '⭐', desc: 'Turn a symbol on a reel into a Wild. Wilds match anything.', target: true },
-  { id: 'dip', name: 'Lucky Dip', icon: '🎲', desc: 'Something random happens to your reels. Or you win a tenner.', target: false },
+  { id: 'gold', name: 'Gold Leaf', icon: '✨', desc: 'Gild a symbol on a reel. Gold symbols score double Coins, and glow through a Power Cut when everything else goes dark.', target: true, price: 4 },
+  { id: 'copy', name: 'Photocopier', icon: '📠', desc: 'Copy a symbol on a reel, so it turns up more often.', target: true, price: 3 },
+  { id: 'bin', name: 'Bin Bag', icon: '🗑️', desc: 'Throw a symbol off a reel to thin out the junk.', target: true, price: 2 },
+  { id: 'wild', name: 'Wild Card', icon: '⭐', desc: 'Turn a symbol on a reel into a Wild. Wilds match anything.', target: true, price: 5 },
+  { id: 'dip', name: 'Lucky Dip', icon: '🎲', desc: 'Something random happens to your reels. Or you find a fiver.', target: false, price: 2 },
 ];
 export const SCRATCH_BY_ID = Object.fromEntries(SCRATCHCARDS.map((s) => [s.id, s]));
 
 // ---------- Crisp packets (pick 1 of a few) ----------
 export const PACKETS = [
-  { id: 'ready', name: 'Ready Salted', icon: '🥔', desc: 'Pick 1 of 3 Beer Mats.', colour: '#e94545' },
-  { id: 'vinegar', name: 'Salt & Vinegar', icon: '🧂', desc: 'Pick 1 of 3 Scratchcards.', colour: '#3d9bff' },
-  { id: 'prawn', name: 'Prawn Cocktail', icon: '🦐', desc: 'Pick 1 of 2 Regulars. Might be a legend.', colour: '#ff6ad5' },
+  { id: 'ready', name: 'Ready Salted', icon: '🥔', desc: 'Pick 1 of 3 Beer Mats.', colour: '#e94545', price: 4 },
+  { id: 'vinegar', name: 'Salt & Vinegar', icon: '🧂', desc: 'Pick 1 of 3 Scratchcards.', colour: '#3d9bff', price: 5 },
+  { id: 'prawn', name: 'Prawn Cocktail', icon: '🦐', desc: 'Pick 1 of 2 Regulars. Might be a legend.', colour: '#ff6ad5', price: 7 },
 ];
 export const PACKET_BY_ID = Object.fromEntries(PACKETS.map((p) => [p.id, p]));
+
+// ---------- Landlord's Specials (big permanent upgrades, one offered per Pint) ----------
+export const SPECIALS = [
+  { id: 'pocket', name: 'Extra Pocket', icon: '👖', price: 10, desc: '+1 Hold every round, for the rest of the run.' },
+  { id: 'shoes',  name: 'Loose Shoes',  icon: '👟', price: 12, desc: '+1 Nudge every round, for the rest of the run. (Sticky Floors still sticks.)' },
+  { id: 'happy',  name: 'Happy Hour',   icon: '🍻', price: 15, desc: '+1 Spin every round, for the rest of the run.' },
+  { id: 'bigbar', name: 'Bigger Bar',   icon: '🍾', price: 8,  desc: 'One more special behind the bar every visit.' },
+  { id: 'piggy',  name: 'Piggy Bank',   icon: '🐷', price: 8,  desc: 'Your interest cap goes up by £2 (to £5).' },
+  { id: 'lockin', name: 'Lock-In',      icon: '🔒', price: 16, desc: 'A 6th slot at the machine for another Regular.' },
+];
+export const SPECIAL_BY_ID = Object.fromEntries(SPECIALS.map((s) => [s.id, s]));
+
+export function hasSpecial(run, id) { return (run.specials || []).includes(id); }
+
+function specialFor(run, pint) {
+  const owned = new Set(run.specials || []);
+  const pool = SPECIALS.filter((s) => !owned.has(s.id));
+  if (!pool.length) return null;
+  return makeRng(`${run.seed}-special-${pint}`).pick(pool).id;
+}
 
 // ---------- Stock ----------
 function rollRegular(rng, run, exclude = [], legendaryChance = 0) {
@@ -52,21 +73,33 @@ function stockItems(run, rng) {
   const a = rollRegular(rng, run);
   const b = rollRegular(rng, run, [a]);
   for (const id of [a, b]) if (id) items.push({ type: 'regular', id, price: priceOf(id) });
-  if (rng.next() < 0.6) items.push({ type: 'mat', id: rng.pick(BASE_SYMBOLS), price: MAT_PRICE });
-  else items.push({ type: 'scratch', id: rng.pick(SCRATCHCARDS).id, price: SCRATCH_PRICE });
+  const extras = hasSpecial(run, 'bigbar') ? 2 : 1;
+  for (let k = 0; k < extras; k++) {
+    if (rng.next() < 0.6) { const m = rng.pick(BASE_SYMBOLS); items.push({ type: 'mat', id: m, price: matPrice(run, m) }); }
+    else { const s = rng.pick(SCRATCHCARDS); items.push({ type: 'scratch', id: s.id, price: s.price }); }
+  }
   return items;
 }
 
 export function openBar(run) {
   const rng = makeRng(`${run.seed}-bar-${run.round}`);
+  const pint = Math.ceil(run.round / 3);
+  const sp = run.specialPint === pint ? null : specialFor(run, pint);
   run.bar = {
     rerolls: 0,
-    rerollCost: 1,
+    rerollCost: RESTOCK_START,
     items: stockItems(run, rng),
-    packets: rng.shuffle(PACKETS.map((p) => p.id)).slice(0, 2).map((id) => ({ type: 'packet', id, price: PACKET_PRICE })),
+    packets: rng.shuffle(PACKETS.map((p) => p.id)).slice(0, 2).map((id) => ({ type: 'packet', id, price: PACKET_BY_ID[id].price })),
+    special: sp ? { type: 'special', id: sp, price: SPECIAL_BY_ID[sp].price } : null,
     pending: null,     // a packet being opened, or a scratchcard waiting for a target
   };
   return run.bar;
+}
+
+// Keep Beer Mat prices in step with levels bought elsewhere (e.g. from a crisp packet).
+export function refreshPrices(run) {
+  if (!run.bar) return;
+  for (const it of run.bar.items) if (it.type === 'mat' && !it.sold) it.price = matPrice(run, it.id);
 }
 
 export function reroll(run) {
@@ -83,14 +116,20 @@ export function reroll(run) {
 // ---------- Buying ----------
 // Returns { ok, reason?, needsTarget?, packet? }
 export function buy(run, kind, index) {
-  const list = kind === 'packet' ? run.bar.packets : run.bar.items;
-  const item = list[index];
+  refreshPrices(run);
+  const item = kind === 'special' ? run.bar.special : (kind === 'packet' ? run.bar.packets : run.bar.items)[index];
   if (!item || item.sold) return { ok: false, reason: 'Sold out' };
   if (run.money < item.price) return { ok: false, reason: 'Not enough money' };
-  if (item.type === 'regular' && run.regulars.length >= MAX_REGULARS) return { ok: false, reason: 'No room at the machine. Sell a Regular first.' };
+  if (item.type === 'regular' && run.regulars.length >= maxRegulars(run)) return { ok: false, reason: 'No room at the machine. Sell a Regular first.' };
 
   run.money -= item.price;
   item.sold = true;
+
+  if (item.type === 'special') {
+    run.specials = [...(run.specials || []), item.id];
+    run.specialPint = Math.ceil(run.round / 3);
+    return { ok: true, special: item.id };
+  }
 
   if (item.type === 'regular') { addRegular(run, item.id); return { ok: true }; }
   if (item.type === 'mat') { levelUp(run, item.id); return { ok: true }; }
@@ -116,7 +155,7 @@ export function pickFromPacket(run, choiceIndex) {
   if (!p || p.kind !== 'packet') return { ok: false };
   if (choiceIndex == null) { run.bar.pending = null; return { ok: true, skipped: true }; }
   const c = p.choices[choiceIndex];
-  if (c.type === 'regular' && run.regulars.length >= MAX_REGULARS) return { ok: false, reason: 'No room at the machine. Skip, or sell one first.' };
+  if (c.type === 'regular' && run.regulars.length >= maxRegulars(run)) return { ok: false, reason: 'No room at the machine. Skip, or sell one first.' };
   run.bar.pending = null;
   if (c.type === 'regular') { addRegular(run, c.id); return { ok: true }; }
   if (c.type === 'mat') { levelUp(run, c.id); return { ok: true, mat: c.id }; }
@@ -167,7 +206,7 @@ export function cancelScratch(run) {
 
 function luckyDip(run) {
   const rng = makeRng(`${run.seed}-dip-${run.round}-${run.money}-${run.regulars.length}`);
-  if (rng.next() < 0.2) { run.money += 10; return { text: 'Lucky Dip: a crumpled tenner! +£10' }; }
+  if (rng.next() < 0.2) { run.money += 5; return { text: 'Lucky Dip: a crumpled fiver! +£5' }; }
   for (let tries = 0; tries < 20; tries++) {
     const id = rng.pick(['gold', 'gold', 'copy', 'bin', 'wild']);
     const r = rng.int(3);
@@ -178,8 +217,8 @@ function luckyDip(run) {
       return { text: `Lucky Dip ${verb} on reel ${r + 1}.` };
     }
   }
-  run.money += 5;
-  return { text: 'Lucky Dip: a fiver down the back of the sofa. +£5' };
+  run.money += 3;
+  return { text: 'Lucky Dip: £3 down the back of the sofa.' };
 }
 
 // ---------- Selling and ordering ----------
@@ -211,6 +250,10 @@ export function itemInfo(item) {
   if (item.type === 'scratch') {
     const s = SCRATCH_BY_ID[item.id];
     return { icon: s.icon, name: s.name, desc: s.desc, tag: 'Scratchcard', colour: '#3dd6ff' };
+  }
+  if (item.type === 'special') {
+    const s = SPECIAL_BY_ID[item.id];
+    return { icon: s.icon, name: s.name, desc: s.desc, tag: 'Landlord\'s Special', colour: '#e9b949' };
   }
   const p = PACKET_BY_ID[item.id];
   return { icon: p.icon, name: p.name, desc: p.desc, tag: 'Crisps', colour: p.colour };

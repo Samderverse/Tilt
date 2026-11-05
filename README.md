@@ -11,7 +11,7 @@ A chaotic pub fruit machine roguelike by Samderverse. Spin, hold, nudge and surv
   - Every spin starts at ×3 Multi. Only the best line's Multi counts (extra lines add Coins), then Regulars add their bonuses
 - **Hold** (3 per round): keep reels still on the next spin. A reel can't be held twice running.
 - **Nudge** (2 per round): after a spin, move a reel up or down one symbol, then **Collect**.
-- Earn £ each round: round reward + £1 per spare spin + interest (£1 per £5 held, max £5).
+- Earn £ each round: round reward + £1 per spare spin (max £3) + interest (£1 per £5 held, max £3).
 - Beat Pint 8's Landlord to win the run.
 
 ## Learning to play
@@ -19,12 +19,20 @@ A chaotic pub fruit machine roguelike by Samderverse. Spin, hold, nudge and surv
 - **Tutorial run**: starts a fresh run where the Barman coaches you through your first spins, the Bar and your first Landlord. Tips show once each; turn them back on any time in Settings ("Barman's tips").
 
 ## The Bar (between rounds)
+Prices scale with power:
+
+| Item | Price |
+|---|---|
+| Regulars | £5 Common, £7 Uncommon, £10 Rare (Legendaries only from Prawn Cocktail) |
+| Beer Mats | £3, +£1 for each level that symbol already has |
+| Scratchcards | Bin Bag £2, Lucky Dip £2, Photocopier £3, Gold Leaf £4, Wild Card £5 |
+| Crisps | Ready Salted £4 (1 of 3 Beer Mats), Salt & Vinegar £5 (1 of 3 Scratchcards), Prawn Cocktail £7 (1 of 2 Regulars) |
+| Restock | £2, then +£1 each time per visit |
+
 - **Regulars** (up to 5): Tilt's jokers. They trigger left to right, so order matters. Tap one to sell or move it.
-  28 so far, across Common, Uncommon, Rare and Legendary (Legendaries only come in Prawn Cocktail crisps).
-- **Beer Mats**: level up a symbol (+5 Coins, +1 Multi per level).
-- **Scratchcards**: edit your reels. Gold Leaf (double Coins), Photocopier, Bin Bag, Wild Card, Lucky Dip.
-- **Crisps**: Ready Salted (pick 1 of 3 Beer Mats), Salt & Vinegar (1 of 3 Scratchcards), Prawn Cocktail (1 of 2 Regulars).
-- **Restock** rerolls the stock: £1, going up £1 each time per visit.
+- **Landlord's Specials**: one big permanent upgrade offered per Pint.
+  Extra Pocket (+1 Hold, £10), Loose Shoes (+1 Nudge, £12), Happy Hour (+1 Spin, £15),
+  Bigger Bar (+1 item in stock, £8), Piggy Bank (interest cap +£2, £8), Lock-In (6th Regular slot, £16).
 
 ## Install on your phone
 Open the GitHub Pages link, then:
@@ -62,6 +70,7 @@ The Bouncer, Health Inspector, Last Orders, Power Cut, The Taxman, Drunk Uncle, 
 - `?money=50` starts with extra cash
 - `?regs=jen,barman,darts` starts with those Regulars (ids in `js/regulars.js`)
 - `?bar=1` opens the Bar straight away
+- `?specials=lockin,piggy` starts with those Landlord's Specials
 - `?taps=1` shows a dot wherever your phone registers a tap, and outlines the button it hit
 - Desktop keys: Space spins/collects, 1–3 hold, Q/A W/S E/D nudge reels up/down
 

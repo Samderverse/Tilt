@@ -4,7 +4,7 @@ import { makeReels, spin as spinStops, toGrid } from './reels.js';
 import { findWins, BASE_MULT } from './scoring.js';
 import { BOSSES, BOSS_BY_ID } from './bosses.js';
 import { runHook, aliasesFor, extrasFor } from './regulars.js';
-import { openBar } from './shop.js';
+import { openBar, hasSpecial } from './shop.js';
 
 export const CONFIG = {
   spins: 6,
@@ -13,7 +13,8 @@ export const CONFIG = {
   pintsToWin: 8,
   startMoney: 4,
   interestPer: 5,    // £1 interest per £5 held
-  interestCap: 5,
+  interestCap: 3,    // +£2 with the Piggy Bank special
+  spareCap: 3,       // £1 per unused spin, up to £3
 };
 
 export const ROUND_KINDS = [
@@ -49,6 +50,8 @@ export function newRun(seed) {
     money: CONFIG.startMoney,
     regulars: [],         // [{ id, state }]
     levels: {},           // Beer Mat levels per symbol
+    specials: [],         // Landlord's Specials owned
+    specialPint: 0,       // Pint a Special was last bought in (one per Pint)
     spinIndex: 0,
     stops: [0, 0, 0],
     bar: null,
@@ -62,6 +65,9 @@ export function startRound(run) {
   const info = roundInfo(run);
   const boss = info.boss;
   const ex = extrasFor(run.regulars);
+  if (hasSpecial(run, 'pocket')) ex.holds++;
+  if (hasSpecial(run, 'shoes')) ex.nudges++;
+  if (hasSpecial(run, 'happy')) ex.spins++;
   run.score = 0;
   run.spinsLeft = (boss?.spins ?? CONFIG.spins) + ex.spins;
   run.holdsLeft = CONFIG.holds + ex.holds;
@@ -207,10 +213,14 @@ export function collect(run) {
 }
 
 // ----- Round end -----
+export function interestCap(run) {
+  return CONFIG.interestCap + (hasSpecial(run, 'piggy') ? 2 : 0);
+}
+
 export function payout(run) {
   const info = roundInfo(run);
-  const spare = run.spinsLeft;
-  const interest = Math.min(CONFIG.interestCap, Math.floor(run.money / CONFIG.interestPer));
+  const spare = Math.min(CONFIG.spareCap, run.spinsLeft);
+  const interest = Math.min(interestCap(run), Math.floor(run.money / CONFIG.interestPer));
   // Peek at Regulars' round-end money without changing their state.
   const copies = run.regulars.map((r) => ({ id: r.id, state: JSON.parse(JSON.stringify(r.state)) }));
   const regs = runHook(copies, 'roundEnd', { run, wasBoss: !!info.boss })

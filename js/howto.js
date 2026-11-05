@@ -44,7 +44,7 @@ export const PAGES = [
   {
     title: 'Money talks',
     art: `<div class="ht-money">£<b>12</b><small>+£2 interest</small></div>`,
-    body: 'You earn £ for each round, plus £1 per spin you didn\'t need, plus <b>interest</b>: £1 for every £5 you\'re holding (up to £5). Saving up can pay.',
+    body: 'You earn £ for each round, plus £1 per spin you didn\'t need (up to £3), plus <b>interest</b>: £1 for every £5 you\'re holding (up to £3). Save up for a <b>Landlord\'s Special</b>: one big permanent upgrade per Pint.',
   },
 ];
 

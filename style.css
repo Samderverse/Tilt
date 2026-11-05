@@ -1104,3 +1104,35 @@ body.in-bar .crt { background: radial-gradient(ellipse at center, transparent 50
 }
 .cell.dark.gold .lvl { display: block; }
 @keyframes gold-glow { 50% { filter: brightness(1.15); } }
+
+/* ---------- Landlord's Special: brass plaque ---------- */
+.regulars { grid-template-columns: repeat(var(--slots, 5), minmax(0, 1fr)); }
+.special-wrap { margin-top: 6px; }
+.special-wrap .item { width: 100%; padding: 0 0 6px; }
+.plaque {
+  position: relative; width: 100%; border-radius: 10px; padding: 14px 18px 12px;
+  display: grid; grid-template-columns: auto 1fr; grid-template-areas: 'k k' 'i n' 'i d'; column-gap: 12px; row-gap: 2px; text-align: left; align-items: center;
+  background:
+    linear-gradient(115deg, transparent 30%, rgba(255,255,255,.35) 42%, transparent 54%),
+    linear-gradient(160deg, #f3d27a, #c9962a 45%, #8a5f14 100%);
+  background-size: 300% 100%, 100% 100%; animation: brass 5s ease-in-out infinite;
+  border: 3px solid #5a3d0b; color: #2a1600;
+  box-shadow: 0 6px 12px rgba(0,0,0,.55), inset 0 2px 0 rgba(255,255,255,.45), inset 0 -3px 0 rgba(0,0,0,.25);
+}
+@keyframes brass { 0%, 40% { background-position: 150% 0, 0 0; } 100% { background-position: -150% 0, 0 0; } }
+.plaque .screw { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff2c4, #7a5410); box-shadow: inset 0 0 0 1px rgba(0,0,0,.4); }
+.plaque .screw::after { content: ''; position: absolute; left: 1px; right: 1px; top: 3.5px; height: 1px; background: rgba(0,0,0,.55); transform: rotate(35deg); }
+.plaque .tl { left: 6px; top: 6px; } .plaque .tr { right: 6px; top: 6px; } .plaque .bl { left: 6px; bottom: 6px; } .plaque .br { right: 6px; bottom: 6px; }
+.pl-kicker { grid-area: k; font-family: var(--font-sign); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; opacity: .75; text-align: center; margin-bottom: 4px; }
+.pl-icon { grid-area: i; font-size: 40px; line-height: 1; filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); }
+.pl-name { grid-area: n; font-family: var(--font-sign); font-size: 20px; line-height: 1.1; text-shadow: 0 1px 0 rgba(255,255,255,.45); }
+.pl-desc { grid-area: d; font-size: 12.5px; line-height: 1.3; font-weight: 700; opacity: .85; }
+.plaque-lg { width: 220px; grid-template-columns: 1fr; grid-template-areas: 'k' 'i' 'n'; text-align: center; justify-items: center; }
+.plaque-lg .pl-icon { font-size: 56px; }
+.special-wrap .price-tag { margin-top: -4px; }
+.owned-special {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px;
+  background: linear-gradient(160deg, #f3d27a, #b8862a); color: #2a1600; font-family: var(--font-sign); font-size: 13px;
+  border: 2px solid #5a3d0b; box-shadow: 0 3px 6px rgba(0,0,0,.4);
+}
+.levels { align-items: center; }

@@ -4,7 +4,7 @@ import { visibleOnReel, ROWS } from './reels.js';
 import { BASE_MULT } from './scoring.js';
 import * as G from './game.js';
 import * as S from './shop.js';
-import { REG_BY_ID, RARITY, MAX_REGULARS, sellValue, describeEffect } from './regulars.js';
+import { REG_BY_ID, RARITY, MAX_REGULARS, maxRegulars, sellValue, describeEffect } from './regulars.js';
 import * as A from './audio.js';
 import * as FX from './fx.js';
 import { loadSettings, saveSettings, CREDITS } from './settings.js';
@@ -41,7 +41,7 @@ const el = {
   howtoBtn: $('howto-btn'), tutorialBtn: $('tutorial-btn'), settingsHowto: $('settings-howto'), optTips: $('opt-tips'),
   // Bar
   barNext: $('bar-next'), barMoney: $('bar-money'), barRegs: $('bar-regulars'), barRegCount: $('bar-reg-count'),
-  stock: $('stock'), packets: $('packets'), restock: $('restock-btn'), levels: $('levels'),
+  stock: $('stock'), packets: $('packets'), special: $('special'), specialWrap: $('special-wrap'), restock: $('restock-btn'), levels: $('levels'),
   viewReels: $('view-reels-btn'), leaveBar: $('leave-bar-btn'),
   sheet: $('sheet'), sheetFace: $('sheet-face'), sheetTag: $('sheet-tag'), sheetName: $('sheet-name'),
   sheetDesc: $('sheet-desc'), sheetStatus: $('sheet-status'), sheetActions: $('sheet-actions'),
@@ -193,7 +193,9 @@ function regBadge(r) {
 
 function renderRegulars(container, where) {
   const cards = [];
-  for (let i = 0; i < MAX_REGULARS; i++) {
+  const slots = maxRegulars(run);
+  container.style.setProperty('--slots', slots);
+  for (let i = 0; i < slots; i++) {
     const r = run.regulars[i];
     if (!r) { cards.push(`<div class="reg-card empty"></div>`); continue; }
     const d = REG_BY_ID[r.id];
@@ -648,13 +650,14 @@ async function roundIntro() {
       ? `<p class="muted">After a spin, NUDGE reels up or down, then COLLECT. Before a spin, HOLD reels to keep them.</p>`
       : '';
     const b = bossRound.boss;
+    const when = bossRound.round - i.round === 1 ? 'next round' : 'two rounds from now';
     await showOverlay({
       kicker: `Pint ${i.pint} · Round ${i.round}`,
       title: i.kind.name,
       body: `<p>Score <b>${i.target}</b> in <b>${run.spinsLeft}</b> spins.</p>${tip}`,
       btn: i.round === 1 ? 'Insert coin' : 'Spin up',
       foot: `<div class="rumour"><span class="boss-face">${b.face}</span>
-        <span>Word at the bar: the Landlord in <b>Round ${bossRound.round}</b> is <b>${b.name}</b>. ${b.rule}</span></div>`,
+        <span>Word at the bar: the Landlord at the end of this Pint (${when}) is <b>${b.name}</b>. ${b.rule}</span></div>`,
     });
   }
   busy = false;
@@ -692,8 +695,8 @@ async function roundCleared() {
     body: `<p>Scored <b>${run.score}</b> / ${i.target}</p>
       <table class="pay-table">
         <tr><td>${i.kind.name} reward</td><td>£${pay.reward}</td></tr>
-        <tr><td>Spare spins (${pay.spare})</td><td>£${pay.spare}</td></tr>
-        <tr><td>Interest (£1 per £5, max £5)</td><td>£${pay.interest}</td></tr>
+        <tr><td>Spare spins (£1 each, max £${G.CONFIG.spareCap})</td><td>£${pay.spare}</td></tr>
+        <tr><td>Interest (£1 per £5, max £${G.interestCap(run)})</td><td>£${pay.interest}</td></tr>
         ${regRows}
         <tr class="total"><td>Total</td><td>£${pay.total}</td></tr>
       </table>`,
@@ -773,6 +776,7 @@ function enterBar() {
 async function barTips() {
   await tip('bar', null, `Welcome to <b>the Bar</b>. Spend your winnings here between rounds. Leftover money earns <b>interest</b>: £1 for every £5 you hold, up to £5.`);
   await tip('stock', document.querySelector('.chalkboard'), `<b>Regulars</b> stand at your machine and boost every spin. <b>Beer Mats</b> level up a symbol. <b>Scratchcards</b> change your reels. Tap anything for details.`);
+  if (run.bar.special) await tip('special', el.specialWrap, `A <b>Landlord's Special</b> is a big permanent upgrade. There's one per Pint, so it's worth saving up for.`);
   await tip('crisps', el.packets, `<b>Crisps</b> are a lucky dip: open a packet and pick 1 of the goodies inside.`);
   await tip('leave', el.leaveBar, `When you're done, head <b>back to the machine</b>. Good luck!`);
 }
@@ -792,19 +796,25 @@ function renderBar() {
   const nx = info();
   el.barNext.textContent = nx.boss ? `Next: the Landlord (${nx.boss.name})` : `Next: ${nx.kind.name}, target ${nx.target}`;
   renderMoney();
+  S.refreshPrices(run);
   renderRegulars(el.barRegs, 'bar');
-  el.barRegCount.textContent = `${run.regulars.length} / ${MAX_REGULARS}`;
+  el.barRegCount.textContent = `${run.regulars.length} / ${maxRegulars(run)}`;
   el.stock.innerHTML = run.bar.items.map((it, i) => itemCardHTML(it, i, 'item')).join('');
   el.packets.innerHTML = run.bar.packets.map((it, i) => itemCardHTML(it, i, 'packet')).join('');
-  [...el.stock.children, ...el.packets.children].forEach((b) =>
+  const sp = run.bar.special;
+  el.specialWrap.classList.toggle('hidden', !sp);
+  el.special.innerHTML = sp ? itemCardHTML(sp, 0, 'special') : '';
+  [...el.stock.children, ...el.packets.children, ...el.special.children].forEach((b) =>
     b.addEventListener('click', () => openItemSheet(b.dataset.kind, Number(b.dataset.idx))));
   el.restock.textContent = `🔔 Restock £${run.bar.rerollCost}`;
   el.restock.disabled = run.money < run.bar.rerollCost;
 
   const lv = Object.entries(run.levels).filter(([, n]) => n > 0);
-  el.levels.innerHTML = lv.length
+  const owned = (run.specials || []).map((id) => S.SPECIAL_BY_ID[id]);
+  el.levels.innerHTML = (lv.length || owned.length)
     ? lv.map(([id, n]) => `<span class="level-chip">${SYMBOLS[id].text ? SYMBOLS[id].name : SYMBOLS[id].icon} <b>Lv ${n + 1}</b></span>`).join('')
-    : `<p class="hint">No Beer Mats yet. Each one levels up a symbol.</p>`;
+      + owned.map((s) => `<span class="owned-special" title="${s.desc}">${s.icon} ${s.name}</span>`).join('')
+    : `<p class="hint">No Beer Mats or Specials yet. Beer Mats level up a symbol.</p>`;
 }
 
 function openSheet({ face = '', art = '', faceText = false, tag, tagColour, name, desc, status = '', actions }) {
@@ -869,15 +879,21 @@ function openRegularSheet(slot, where) {
   });
 }
 
+function barItem(kind, idx) {
+  if (kind === 'special') return run.bar.special;
+  return (kind === 'packet' ? run.bar.packets : run.bar.items)[idx];
+}
+
 function openItemSheet(kind, idx) {
-  const item = (kind === 'packet' ? run.bar.packets : run.bar.items)[idx];
+  const item = barItem(kind, idx);
   if (!item || item.sold) return;
   const inf = S.itemInfo(item);
   let reason = '';
   if (run.money < item.price) reason = `You need £${item.price - run.money} more.`;
-  else if (item.type === 'regular' && run.regulars.length >= MAX_REGULARS) reason = 'No room at the machine. Sell a Regular first.';
+  else if (item.type === 'regular' && run.regulars.length >= maxRegulars(run)) reason = 'No room at the machine. Sell a Regular first.';
   let status = reason;
-  if (item.type === 'mat') status = status || `${SYMBOLS[item.id].name} is level ${(run.levels[item.id] || 0) + 1} now.`;
+  if (item.type === 'mat') status = status || `${SYMBOLS[item.id].name} is level ${(run.levels[item.id] || 0) + 1} now. Each level makes the next Mat £1 dearer.`;
+  if (item.type === 'special') status = status || 'Permanent for the rest of the run.';
   openSheet({
     art: itemArt(item, 'lg'),
     tag: inf.tag, tagColour: inf.colour, name: inf.name, desc: inf.desc, status,
@@ -898,7 +914,7 @@ function bought(text) {
 }
 
 function buyItem(kind, idx) {
-  const item = (kind === 'packet' ? run.bar.packets : run.bar.items)[idx];
+  const item = barItem(kind, idx);
   if (item.type === 'scratch' && S.SCRATCH_BY_ID[item.id].target) {
     // Choose the target first; only pay once it's applied.
     openPicker(item.id, (r, k) => {
@@ -912,6 +928,13 @@ function buyItem(kind, idx) {
   if (!res.ok) { A.sfx.denied(); toast(res.reason); return; }
   if (res.packet) { bought(); openPacket(res.packet); return; }
   if (res.dip) { bought(res.dip.text); return; }
+  if (res.special) {
+    FX.flash('#ffe9a6', 350);
+    FX.burstFrom(el.special, 30, 'coin', 1);
+    A.sfx.clear();
+    bought(`${S.SPECIAL_BY_ID[res.special].name} is yours for the rest of the run.`);
+    return;
+  }
   if (item.type === 'mat') {
     FX.burstFrom(el.levels, 20, 'coin', 0.8);
     bought(`${SYMBOLS[item.id].name} levelled up!`);
@@ -987,7 +1010,7 @@ function openPacket(pending) {
 
 function choosePacket(pending, ci) {
   const c = pending.choices[ci];
-  if (c.type === 'regular' && run.regulars.length >= MAX_REGULARS) {
+  if (c.type === 'regular' && run.regulars.length >= maxRegulars(run)) {
     A.sfx.denied();
     toast('No room at the machine. Skip, or sell one first.');
     return;
@@ -1139,7 +1162,8 @@ function boot() {
       if (boss) r.bossOrder = Array(pint - 1).fill(r.bossOrder[1]).concat(r.bossOrder);
     }
     if (params.get('money')) r.money = Number(params.get('money'));
-    if (params.get('regs')) params.get('regs').split(',').filter((id) => REG_BY_ID[id]).slice(0, MAX_REGULARS).forEach((id) => S.addRegular(r, id));
+    if (params.get('regs')) params.get('regs').split(',').filter((id) => REG_BY_ID[id]).slice(0, 6).forEach((id) => S.addRegular(r, id));
+    if (params.get('specials')) r.specials = params.get('specials').split(',').filter((id) => S.SPECIAL_BY_ID[id]);
     G.startRound(r);
     if (params.get('bar')) { S.openBar(r); r.phase = 'bar'; }
     return r;

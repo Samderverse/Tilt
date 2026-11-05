@@ -11,9 +11,9 @@
 // An effect is { coins, mult, xmult, money, text } (any subset), or null.
 
 export const RARITY = {
-  common:    { name: 'Common',    price: 4,  weight: 64, colour: '#8fd3ff' },
-  uncommon:  { name: 'Uncommon',  price: 6,  weight: 28, colour: '#7dff6a' },
-  rare:      { name: 'Rare',      price: 8,  weight: 8,  colour: '#ff6ad5' },
+  common:    { name: 'Common',    price: 5,  weight: 64, colour: '#8fd3ff' },
+  uncommon:  { name: 'Uncommon',  price: 7,  weight: 28, colour: '#7dff6a' },
+  rare:      { name: 'Rare',      price: 10,  weight: 8,  colour: '#ff6ad5' },
   legendary: { name: 'Legendary', price: 12, weight: 0,  colour: '#ffc23d' },
 };
 
@@ -187,6 +187,8 @@ export const REGULARS = [
 export const REG_BY_ID = Object.fromEntries(REGULARS.map((r) => [r.id, r]));
 
 export const MAX_REGULARS = 5;
+// The Lock-In special adds a 6th slot.
+export function maxRegulars(run) { return MAX_REGULARS + ((run.specials || []).includes('lockin') ? 1 : 0); }
 
 export function priceOf(id) { return RARITY[REG_BY_ID[id].rarity].price; }
 

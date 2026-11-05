@@ -2,7 +2,7 @@
 // scratchcard tickets and crisp packets. Pure HTML/CSS/SVG, no image files.
 import { SYMBOLS } from './symbols.js';
 import { REG_BY_ID, RARITY } from './regulars.js';
-import { SCRATCH_BY_ID, PACKET_BY_ID } from './shop.js';
+import { SCRATCH_BY_ID, PACKET_BY_ID, SPECIAL_BY_ID } from './shop.js';
 
 // A stable colour per character, so every Regular has their own look.
 export function hueOf(id) {
@@ -76,8 +76,21 @@ export function crispPacket(id, big = false) {
   </div>`;
 }
 
+// ---------- Landlord's Specials: a brass plaque ----------
+export function specialPlaque(id, size = 'md') {
+  const s = SPECIAL_BY_ID[id];
+  return `<div class="plaque plaque-${size}">
+    <i class="screw tl"></i><i class="screw tr"></i><i class="screw bl"></i><i class="screw br"></i>
+    <span class="pl-kicker">Landlord's Special</span>
+    <span class="pl-icon">${s.icon}</span>
+    <span class="pl-name">${s.name}</span>
+    ${size === 'md' ? `<span class="pl-desc">${s.desc}</span>` : ''}
+  </div>`;
+}
+
 // Any shop item.
 export function itemArt(item, size = 'md') {
+  if (item.type === 'special') return specialPlaque(item.id, size === 'lg' ? 'lg' : 'md');
   if (item.type === 'regular') return regularCard(item.id, size);
   if (item.type === 'mat') return beerMat(item.id);
   if (item.type === 'scratch') return scratchCard(item.id);
