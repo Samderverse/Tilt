@@ -67,8 +67,16 @@ Open the GitHub Pages link, then:
 - Late: Power Cut, The Taxman, Drunk Uncle, Half Measures, Darts Night, Smoke Machine, Members Only, Watered Down
 
 ## Starting machines
-Unlocked by your best run: The Local (always), Seaside Arcade (clear Pint 2), Student Union (Pint 4),
-Working Men's Club (Pint 6), High Roller (beat the pub).
+Unlocked by your best run. Each has its own look (scenery, cabinet, marquee sign, lights and lettering);
+the reels and buttons stay identical, and Landlord rounds still turn everything red.
+
+| Machine | Unlock | Look |
+|---|---|---|
+| 🍺 The Local | always | Burgundy wood, brass plate, warm pub glow |
+| 🎡 Seaside Arcade | clear Pint 2 | Candy stripes, fairground bulbs, sunset over the sea, seagulls |
+| 🎓 Student Union | clear Pint 4 | Navy cabinet covered in stickers, UV neon, gig posters |
+| 🎱 Working Men's Club | clear Pint 6 | 70s wood veneer, mustard trim, swirly pub carpet |
+| 🎩 High Roller | beat the pub | Art deco black and gold, green baize, falling sparkles |
 
 ## Extras
 - **Album**: every Regular you've seen or recruited, and every Landlord you've faced or beaten.
@@ -113,6 +121,7 @@ That's what makes the "new version available" banner appear for everyone.
 - `js/fx.js`: particles, flashes, shakes, glitches
 - `js/settings.js`: settings and credits
 - `js/machines.js`: starting machines
+- `js/scenery.js`: machine scenery, cabinet decorations and picker previews
 - `js/album.js`: the Album
 - `js/version.js`, `version.json`, `sw.js`: update notice and offline play
 - `icons/`, `manifest.json`: app icon and home-screen install
@@ -124,3 +133,4 @@ That's what makes the "new version available" banner appear for everyone.
 - Drop C: art & identity pass, How to Play, tutorial ✅
 - Economy rework, Landlord's Specials ✅
 - Drop D: endless, bump & tilt, 8 Landlords, 6 Regulars, machines, album, speed, updates ✅
+- v1.6: machine themes ✅

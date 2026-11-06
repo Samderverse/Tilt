@@ -12,6 +12,7 @@ import { regularCard, itemArt, crispPacket, hueOf } from './art.js';
 import { openHowTo, bindHowTo } from './howto.js';
 import { tip, tipsOn, setTips, resetTips } from './coach.js';
 import { MACHINES, MACHINE_BY_ID, machineOf } from './machines.js';
+import { setScenery, miniCabinet } from './scenery.js';
 import { VERSION } from './version.js';
 import { openAlbum, bindAlbum, seeRegular, ownRegular, faceBoss, beatBoss } from './album.js';
 
@@ -319,6 +320,12 @@ function showScreen(name) {
   for (const s of [el.title, el.game, el.barScreen]) s.classList.remove('active');
   ({ title: el.title, game: el.game, bar: el.barScreen })[name].classList.add('active');
   document.body.classList.toggle('in-bar', name === 'bar');
+  // Each machine dresses the game screen; the title screen and the Bar stay as they are.
+  const m = name === 'game' && run ? machineOf(run) : null;
+  if (m) document.body.dataset.machine = m.id; else delete document.body.dataset.machine;
+  setScenery(m ? m.id : '');
+  const mq = document.getElementById('marquee-text');
+  if (mq && m) mq.textContent = m.short || m.name;
 }
 
 // ---------- Spin animation ----------
@@ -1220,8 +1227,8 @@ function chooseMachine() {
     el.machineList.innerHTML = MACHINES.map((m) => {
       const locked = m.unlock > best;
       return `<button class="machine-card${locked ? ' locked' : ''}" data-id="${m.id}" ${locked ? 'disabled' : ''}>
-        <span class="mc-icon">${locked ? '🔒' : m.icon}</span>
-        <span class="mc-text"><b>${m.name}</b><span>${locked ? m.unlockText : m.desc}</span></span></button>`;
+        ${miniCabinet(m, locked)}
+        <span class="mc-text"><b>${locked ? '🔒 ' : m.icon + ' '}${m.name}</b><span>${locked ? m.unlockText : m.desc}</span></span></button>`;
     }).join('');
     const done = (id) => { el.machines.classList.add('hidden'); resolve(id); };
     el.machineList.querySelectorAll('.machine-card:not(.locked)').forEach((b) => b.addEventListener('click', () => { A.sfx.coin(); done(b.dataset.id); }));

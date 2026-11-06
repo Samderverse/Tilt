@@ -1,11 +1,11 @@
 // Tilt service worker: network-first, so players always get the latest version when online,
 // with a cached copy to fall back on when offline.
-const CACHE = 'tilt-cache-v1';
+const CACHE = 'tilt-cache-v2';
 const CORE = [
   './', 'index.html', 'style.css', 'manifest.json',
   'js/main.js', 'js/game.js', 'js/scoring.js', 'js/symbols.js', 'js/reels.js', 'js/rng.js',
   'js/bosses.js', 'js/regulars.js', 'js/shop.js', 'js/machines.js', 'js/art.js', 'js/audio.js',
-  'js/fx.js', 'js/settings.js', 'js/howto.js', 'js/coach.js', 'js/album.js', 'js/version.js',
+  'js/fx.js', 'js/settings.js', 'js/howto.js', 'js/coach.js', 'js/album.js', 'js/version.js', 'js/scenery.js',
   'icons/icon-192.png', 'icons/apple-touch-icon.png', 'icons/favicon.svg',
 ];
 

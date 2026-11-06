@@ -1250,3 +1250,222 @@ body.in-bar .crt { background: radial-gradient(ellipse at center, transparent 50
 .settings-panel .toggle, .settings-panel .slider { padding: 8px 0; }
 .update-banner .ub-actions { display: flex; align-items: center; gap: 4px; flex: none; }
 .update-banner .ub-later { font-size: 13px; padding: 8px 6px; }
+
+/* =================== Machine themes =================== */
+:root { --font-theme: 'Rye', Georgia, serif; }
+
+/* Scenery layer: the room behind the machine */
+.scenery { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; transition: opacity .6s; }
+body.boss .scenery { opacity: .16; }
+body.in-bar .scenery, body:not([data-machine]) .scenery { display: none; }
+
+/* Marquee sign above the reels */
+.marquee {
+  position: relative; z-index: 2; margin: 2px 0 8px; padding: 3px 18px; border-radius: 8px; max-width: 92%;
+  font-family: var(--font-theme); font-size: 17px; line-height: 1.3; letter-spacing: .08em; white-space: nowrap;
+  color: var(--accent); background: rgba(0,0,0,.45); border: 2px solid var(--accent-dim);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--accent) 60%, transparent);
+  box-shadow: inset 0 0 12px rgba(0,0,0,.6);
+}
+body.boss .marquee { font-family: var(--font-display); letter-spacing: .04em; }
+#game-screen.compact .marquee { font-size: 13px; margin: 0 0 6px; padding: 1px 14px; }
+#game-screen.tight .marquee { display: none; }
+.cab-deco { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+body.boss .cab-deco { opacity: .35; filter: grayscale(.6); }
+.deco { position: absolute; line-height: 1; }
+#game-screen.tight .deco.plate { display: none; }
+
+/* ---------- The Local: brass plate on burgundy wood ---------- */
+body[data-machine="local"]:not(.boss) .marquee {
+  background: linear-gradient(160deg, #f3d27a, #b8862a 55%, #8a5f14); color: #2a1600; border-color: #5a3d0b;
+  text-shadow: 0 1px 0 rgba(255,255,255,.45); box-shadow: 0 2px 4px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.5);
+}
+
+/* ---------- Seaside Arcade: candy stripes, fairground bulbs, dusk over the sea ---------- */
+body[data-machine="seaside"]:not(.boss) {
+  --bg: #1c2f5e; --bg-2: #3b4a8f; --wood: #c23a68; --wood-hi: #e04f80;
+  --accent: #ffe066; --accent-dim: #3fd3b0; --neon: #4dffd2; --font-theme: 'Lilita One', 'Bungee', sans-serif;
+}
+body[data-machine="seaside"] .scenery {
+  background:
+    radial-gradient(circle at 50% 74%, rgba(255,220,140,.9) 0 7%, rgba(255,170,110,.35) 12%, transparent 28%),
+    linear-gradient(180deg, #14264f 0%, #2f3f85 38%, #8a5aa0 60%, #f08a7e 76%, #ffc46b 84%, #ffc46b 100%);
+}
+.scenery .sun { position: absolute; left: 50%; top: 68%; width: 90px; height: 90px; margin-left: -45px; border-radius: 50%;
+  background: radial-gradient(circle, #fff3c4, #ffc46b 60%, #ff9a6b); box-shadow: 0 0 60px rgba(255,190,110,.7); }
+.scenery .sea { position: absolute; left: 0; right: 0; bottom: 0; height: 22%; background: linear-gradient(#2b7c9a, #123f63); }
+.scenery .wave { position: absolute; left: -10%; width: 120%; height: 34px; top: -18px; animation: drift 9s ease-in-out infinite alternate; }
+.scenery .wave path { fill: #2b7c9a; }
+.scenery .wave.w2 { top: -8px; opacity: .85; animation-duration: 7s; animation-direction: alternate-reverse; }
+.scenery .wave.w2 path { fill: #23698a; }
+.scenery .wave.w3 { top: 6px; animation-duration: 11s; }
+.scenery .wave.w3 path { fill: #1b5878; }
+@keyframes drift { from { transform: translateX(-4%); } to { transform: translateX(4%); } }
+.scenery .gull { position: absolute; width: 34px; height: 14px; left: -60px; animation: glide 22s linear infinite; }
+.scenery .gull path { fill: none; stroke: #1a1a2e; stroke-width: 3; stroke-linecap: round; }
+.scenery .gull.g1 { top: 10%; }
+.scenery .gull.g2 { top: 18%; width: 24px; animation-delay: -9s; animation-duration: 28s; }
+.scenery .gull.g3 { top: 7%; width: 18px; animation-delay: -17s; animation-duration: 34s; }
+@keyframes glide { 0% { transform: translate(0, 0); } 50% { transform: translate(55vw, 18px); } 100% { transform: translate(115vw, -6px); } }
+body[data-machine="seaside"]:not(.boss) .machine {
+  background:
+    linear-gradient(rgba(255,255,255,.14), rgba(0,0,0,.18)),
+    repeating-linear-gradient(90deg, #e04f80 0 20px, #fff3f7 20px 23px, #c23a68 23px 43px, #fff3f7 43px 46px);
+  box-shadow: inset 0 0 0 4px #3fd3b0, inset 0 0 0 7px #fff3f7, 0 10px 30px rgba(0,0,0,.55);
+}
+body[data-machine="seaside"]:not(.boss) .lights {
+  background: repeating-linear-gradient(90deg, #ff5a7a 0 6px, transparent 6px 12px, #ffe066 12px 18px, transparent 18px 24px, #4dffd2 24px 30px, transparent 30px 36px);
+  opacity: .95; animation-duration: .9s;
+}
+body[data-machine="seaside"]:not(.boss) .marquee {
+  background: #ff6fa5; color: #fff; border: 3px dotted #ffe066; text-shadow: 0 2px 0 #b8285c, 0 0 10px rgba(255,255,255,.6);
+  font-size: 20px; letter-spacing: .1em; box-shadow: 0 0 14px rgba(255,224,102,.6);
+}
+body[data-machine="seaside"]:not(.boss) .message { text-shadow: 0 1px 3px #6a0f33, 0 0 6px #6a0f33; }
+body[data-machine="seaside"]:not(.boss) .spin-btn:not(.collect) { background: radial-gradient(circle at 50% 30%, #ff9ac0, #e04f80 70%); box-shadow: 0 8px 0 #8a1f45, 0 0 30px rgba(255,111,165,.5); }
+body[data-machine="seaside"]:not(.boss) .reels { box-shadow: inset 0 0 0 3px #3fd3b0; }
+.deco.shell { font-size: 20px; filter: drop-shadow(0 2px 2px rgba(0,0,0,.4)); }
+.deco.s1 { left: 6px; top: 34%; transform: rotate(-12deg); } .deco.s2 { right: 6px; top: 58%; transform: rotate(14deg); }
+.deco.plate { right: 12px; bottom: 6px; font-family: var(--font-display); font-size: 8px; letter-spacing: .08em; padding: 2px 6px; border-radius: 4px;
+  background: #fff3f7; color: #c23a68; box-shadow: 0 1px 2px rgba(0,0,0,.4); }
+
+/* ---------- Student Union: stickers, UV neon, gig posters ---------- */
+body[data-machine="student"]:not(.boss) {
+  --bg: #0b0d22; --bg-2: #1c1f4f; --wood: #141846; --wood-hi: #232a72;
+  --accent: #8cff5a; --accent-dim: #b14dff; --neon: #8cff5a; --font-theme: 'Permanent Marker', cursive;
+}
+body[data-machine="student"] .scenery { background: radial-gradient(ellipse at 50% 40%, #1d1650, #090a1c 75%); }
+.scenery .poster {
+  position: absolute; aspect-ratio: .72; padding: 8px 6px; border-radius: 2px; text-align: center;
+  background: linear-gradient(160deg, var(--pc), color-mix(in srgb, var(--pc) 45%, #000));
+  opacity: .32; box-shadow: 0 4px 10px rgba(0,0,0,.6); display: flex; flex-direction: column; justify-content: center; gap: 6px;
+}
+.scenery .poster::before { content: ''; position: absolute; top: -4px; left: 50%; width: 14px; height: 8px; margin-left: -7px; background: rgba(255,255,255,.55); }
+.scenery .poster b { font-family: 'Permanent Marker', cursive; font-size: clamp(14px, 5vw, 24px); color: #0b0d22; line-height: 1; }
+.scenery .poster i { font-style: normal; font-size: 10px; color: #0b0d22; font-weight: 700; }
+body[data-machine="student"]:not(.boss) .machine {
+  background: radial-gradient(circle at 20% 10%, rgba(177,77,255,.25), transparent 45%), linear-gradient(180deg, #232a72, #141846);
+  box-shadow: 0 0 0 2px #b14dff, 0 0 28px rgba(177,77,255,.55), 0 10px 30px rgba(0,0,0,.6);
+}
+body[data-machine="student"]:not(.boss) .lights {
+  background: repeating-linear-gradient(90deg, #8cff5a 0 8px, transparent 8px 14px, #b14dff 14px 22px, transparent 22px 28px);
+  filter: drop-shadow(0 0 4px #8cff5a); opacity: .9;
+}
+body[data-machine="student"]:not(.boss) .marquee {
+  background: #0b0d22; color: #8cff5a; border: 2px solid #8cff5a; transform: rotate(-1.5deg); font-size: 19px; letter-spacing: .06em;
+  text-shadow: 0 0 6px #8cff5a, 0 0 14px #8cff5a; box-shadow: 0 0 12px rgba(140,255,90,.45);
+}
+body[data-machine="student"]:not(.boss) .reels { box-shadow: inset 0 0 0 3px #b14dff, 0 0 16px rgba(177,77,255,.5); }
+body[data-machine="student"]:not(.boss) .spin-btn:not(.collect) { background: radial-gradient(circle at 50% 30%, #c9ff9a, #5ccc2a 70%); color: #0b2a00; box-shadow: 0 8px 0 #2f6b10, 0 0 30px rgba(140,255,90,.45); }
+body[data-machine="student"]:not(.boss) #pint-label { font-family: 'Permanent Marker', cursive; letter-spacing: .02em; }
+.deco.sticker {
+  font-size: 15px; padding: 3px 5px; border-radius: 8px; background: #fff; color: #141846; font-family: 'Permanent Marker', cursive;
+  box-shadow: 0 2px 3px rgba(0,0,0,.5);
+}
+.deco.k1 { left: 4px; top: 30%; transform: rotate(-14deg); } .deco.k2 { right: 4px; top: 24%; transform: rotate(10deg); background: #8cff5a; }
+.deco.k3 { left: 6px; top: 62%; transform: rotate(8deg); } .deco.k4 { right: 5px; top: 66%; transform: rotate(-9deg); background: #ff3df0; }
+
+/* ---------- Working Men's Club: 70s veneer, mustard, swirly carpet ---------- */
+body[data-machine="wmc"]:not(.boss) {
+  --bg: #2a1608; --bg-2: #4a2a10; --wood: #5a3412; --wood-hi: #7a4a1c;
+  --accent: #ffbf47; --accent-dim: #d08a24; --neon: #ff8a2b; --font-theme: 'Shrikhand', Georgia, serif;
+}
+body[data-machine="wmc"] .scenery {
+  background:
+    linear-gradient(rgba(25,10,2,.55), rgba(25,10,2,.72)),
+    radial-gradient(circle at 25% 25%, #e6a52d 0 7%, transparent 8%) 0 0 / 64px 64px,
+    radial-gradient(circle at 75% 75%, #c86b1e 0 9%, transparent 10%) 0 0 / 64px 64px,
+    radial-gradient(circle at 75% 25%, #3f6b3a 0 5%, transparent 6%) 0 0 / 64px 64px,
+    repeating-radial-gradient(circle at 25% 75%, #7a2e10 0 5px, #9a4316 5px 10px, #5e220b 10px 15px) 0 0 / 64px 64px,
+    #5a2a10;
+}
+.scenery .lamp { position: absolute; top: 0; width: 160px; height: 220px; margin-left: -80px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255,200,110,.45), transparent 70%); }
+.scenery .lamp.l1 { left: 22%; } .scenery .lamp.l2 { left: 78%; }
+body[data-machine="wmc"]:not(.boss) .machine {
+  border-radius: 14px;
+  background:
+    linear-gradient(rgba(255,255,255,.08), rgba(0,0,0,.2)),
+    repeating-linear-gradient(90deg, #6b3d16 0 3px, #5a3412 3px 8px, #7a4a1c 8px 10px, #62391a 10px 15px);
+  box-shadow: inset 0 0 0 4px #e0a830, inset 0 0 0 6px #5a3412, 0 10px 30px rgba(0,0,0,.6);
+}
+body[data-machine="wmc"]:not(.boss) .lights { background: repeating-linear-gradient(90deg, #ffcf6b 0 7px, transparent 7px 18px); opacity: .55; animation-duration: 2.4s; filter: drop-shadow(0 0 3px #ffbf47); }
+body[data-machine="wmc"]:not(.boss) .marquee {
+  color: #4a2008; border: 3px solid #5a3412; font-size: 19px; letter-spacing: .03em;
+  background: radial-gradient(circle, rgba(255,255,255,.35) 0 1.5px, transparent 2px) 0 0 / 7px 7px, linear-gradient(#ffcf6b, #e09a2a);
+  text-shadow: 0 1px 0 rgba(255,240,200,.6); box-shadow: 0 0 14px rgba(255,191,71,.45), inset 0 0 8px rgba(120,60,0,.4);
+}
+body[data-machine="wmc"]:not(.boss) .reels { box-shadow: inset 0 0 0 3px #e0a830; }
+body[data-machine="wmc"]:not(.boss) .spin-btn:not(.collect) { background: radial-gradient(circle at 50% 30%, #ffb26b, #d0641c 70%); box-shadow: 0 8px 0 #6e2f08, 0 0 26px rgba(255,140,40,.4); }
+body[data-machine="wmc"]:not(.boss) #pint-label { font-family: 'Shrikhand', Georgia, serif; letter-spacing: .02em; }
+body[data-machine="wmc"] .deco.plate { right: 12px; bottom: 6px; background: linear-gradient(#f3d27a, #b8862a); color: #3a1c00; font-family: Georgia, serif; font-size: 9px; }
+
+/* ---------- High Roller: art deco, black lacquer and gold, green baize ---------- */
+body[data-machine="casino"]:not(.boss) {
+  --bg: #04140c; --bg-2: #0d3a24; --wood: #0b0b0d; --wood-hi: #1c1c22;
+  --accent: #f0cf72; --accent-dim: #b08a3e; --neon: #f5d77a; --font-theme: 'Limelight', Georgia, serif;
+}
+body[data-machine="casino"] .scenery {
+  background:
+    repeating-linear-gradient(45deg, rgba(240,207,114,.05) 0 1px, transparent 1px 22px),
+    repeating-linear-gradient(-45deg, rgba(240,207,114,.05) 0 1px, transparent 1px 22px),
+    radial-gradient(ellipse at 50% 30%, #1f6b45, #0b3a24 60%, #04140c);
+}
+.scenery .deco-fan { position: absolute; left: 50%; top: -120px; width: 420px; height: 240px; margin-left: -210px; border-radius: 0 0 210px 210px;
+  background: repeating-conic-gradient(from 90deg at 50% 0%, rgba(240,207,114,.14) 0 6deg, transparent 6deg 12deg); }
+.scenery .spark { position: absolute; top: -10px; width: 4px; height: 4px; border-radius: 50%; background: #fff3c4;
+  box-shadow: 0 0 6px 2px rgba(255,230,150,.8); animation: sparkle-fall linear infinite; opacity: 0; }
+@keyframes sparkle-fall { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: 1; } 50% { opacity: .3; } 70% { opacity: 1; } 100% { transform: translateY(105vh); opacity: 0; } }
+body[data-machine="casino"]:not(.boss) .machine {
+  background: linear-gradient(160deg, #1c1c22, #0b0b0d 55%, #16161a);
+  box-shadow: inset 0 0 0 3px #c9a24a, inset 0 0 0 7px #0b0b0d, inset 0 0 0 8px #8a6a2a, 0 10px 34px rgba(0,0,0,.7);
+}
+body[data-machine="casino"]:not(.boss) .lights { background: repeating-linear-gradient(90deg, #fff6d8 0 4px, transparent 4px 12px); opacity: .85; filter: drop-shadow(0 0 4px #f0cf72); }
+body[data-machine="casino"]:not(.boss) .marquee {
+  background: #0b0b0d; color: #f0cf72; border: 0; border-top: 2px solid #c9a24a; border-bottom: 2px solid #c9a24a; border-radius: 0;
+  font-size: 18px; letter-spacing: .22em; padding: 3px 22px; text-shadow: 0 0 8px rgba(240,207,114,.5);
+}
+body[data-machine="casino"]:not(.boss) .marquee::before, body[data-machine="casino"]:not(.boss) .marquee::after {
+  content: '◆'; position: absolute; top: 50%; transform: translateY(-50%); font-size: 10px; color: #c9a24a;
+}
+body[data-machine="casino"]:not(.boss) .marquee::before { left: 6px; }
+body[data-machine="casino"]:not(.boss) .marquee::after { right: 6px; }
+body[data-machine="casino"]:not(.boss) .reels { box-shadow: inset 0 0 0 3px #c9a24a; }
+body[data-machine="casino"]:not(.boss) .spin-btn:not(.collect) { background: linear-gradient(#2a2a30, #0b0b0d); color: #f0cf72; border: 2px solid #c9a24a; box-shadow: 0 8px 0 #000, 0 0 24px rgba(240,207,114,.3); }
+body[data-machine="casino"]:not(.boss) #pint-label { font-family: 'Limelight', Georgia, serif; letter-spacing: .06em; }
+.deco.corner { font-size: 11px; color: #c9a24a; }
+.deco.c1 { left: 8px; top: 8px; } .deco.c2 { right: 8px; top: 8px; } .deco.c3 { left: 8px; bottom: 8px; } .deco.c4 { right: 8px; bottom: 8px; }
+
+/* ---------- Machine picker: mini cabinets ---------- */
+.mini-cab {
+  flex: none; width: 58px; height: 70px; border-radius: 9px; padding: 5px 4px; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: linear-gradient(180deg, #6a1f2c, #4a1a22); box-shadow: 0 3px 6px rgba(0,0,0,.5);
+}
+.mini-marquee { width: 100%; text-align: center; font-size: 6.5px; line-height: 1.6; letter-spacing: .04em; border-radius: 3px; white-space: nowrap; overflow: hidden;
+  font-family: 'Rye', Georgia, serif; background: linear-gradient(#f3d27a, #b8862a); color: #2a1600; }
+.mini-reels { display: flex; gap: 2px; padding: 2px; border-radius: 4px; background: #120408; }
+.mini-reels i { font-style: normal; width: 14px; height: 18px; border-radius: 2px; background: #fff8ea; display: grid; place-items: center; font-size: 10px;
+  font-family: var(--font-display); color: #c41f2b; }
+.mini-btn { width: 70%; height: 7px; border-radius: 4px; background: #c41f2b; margin-top: auto; }
+.mini-cab[data-m="seaside"] { background: repeating-linear-gradient(90deg, #e04f80 0 6px, #fff3f7 6px 7px, #c23a68 7px 13px, #fff3f7 13px 14px); box-shadow: inset 0 0 0 2px #3fd3b0, 0 3px 6px rgba(0,0,0,.5); }
+.mini-cab[data-m="seaside"] .mini-marquee { background: #ff6fa5; color: #fff; font-family: 'Lilita One', sans-serif; }
+.mini-cab[data-m="seaside"] .mini-btn { background: #ff9ac0; }
+.mini-cab[data-m="student"] { background: linear-gradient(#232a72, #141846); box-shadow: 0 0 0 1px #b14dff, 0 0 10px rgba(177,77,255,.6); }
+.mini-cab[data-m="student"] .mini-marquee { background: #0b0d22; color: #8cff5a; font-family: 'Permanent Marker', cursive; text-shadow: 0 0 3px #8cff5a; }
+.mini-cab[data-m="student"] .mini-btn { background: #8cff5a; }
+.mini-cab[data-m="wmc"] { background: repeating-linear-gradient(90deg, #6b3d16 0 2px, #5a3412 2px 5px, #7a4a1c 5px 6px); box-shadow: inset 0 0 0 2px #e0a830, 0 3px 6px rgba(0,0,0,.5); }
+.mini-cab[data-m="wmc"] .mini-marquee { background: linear-gradient(#ffcf6b, #e09a2a); color: #4a2008; font-family: 'Shrikhand', serif; }
+.mini-cab[data-m="wmc"] .mini-btn { background: #d0641c; }
+.mini-cab[data-m="casino"] { background: linear-gradient(160deg, #1c1c22, #0b0b0d); box-shadow: inset 0 0 0 2px #c9a24a, 0 3px 6px rgba(0,0,0,.5); }
+.mini-cab[data-m="casino"] .mini-marquee { background: #0b0b0d; color: #f0cf72; font-family: 'Limelight', serif; border-top: 1px solid #c9a24a; border-bottom: 1px solid #c9a24a; border-radius: 0; }
+.mini-cab[data-m="casino"] .mini-btn { background: #c9a24a; }
+.mini-cab.locked { filter: grayscale(1) brightness(.35) contrast(.8); }
+.machine-card.locked .mini-cab { opacity: 1; }
+.machine-card { gap: 14px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .scenery .gull, .scenery .spark, .scenery .wave { animation: none; display: none; }
+}
+body.reduced-fx .scenery .gull, body.reduced-fx .scenery .spark { display: none; }
+body.reduced-fx .scenery .wave { animation: none; }
+.scenery .poster { opacity: .2; }
