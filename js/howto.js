@@ -39,7 +39,7 @@ export const PAGES = [
   {
     title: 'Pints & Landlords',
     art: `<div class="ht-pints"><span>Half<br>Pint</span><span>Full<br>Pint</span><span class="boss">😠<br>Landlord</span></div>`,
-    body: 'Rounds come in <b>Pints</b> of three. The third is a <b>Landlord</b> with a nasty rule. You\'ll hear who\'s coming before you get there. Beat 8 Landlords to win, then keep going in <b>Endless</b> if you dare.',
+    body: 'Rounds come in <b>Pints</b> of three. The third is a <b>Landlord</b> with a nasty rule. You\'ll hear who\'s coming before you get there. Beat 8 Landlords to win, then keep going in <b>Endless</b> if you dare. Every Pint makes the pub a little wobblier…',
   },
   {
     title: 'The Bar',

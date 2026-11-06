@@ -78,6 +78,21 @@ the reels and buttons stay identical, and Landlord rounds still turn everything 
 | 🎱 Working Men's Club | clear Pint 6 | 70s wood veneer, mustard trim, swirly pub carpet |
 | 🎩 High Roller | beat the pub | Art deco black and gold, green baize, falling sparkles |
 
+## Drunk effects
+The more Pints you've had, the wobblier the pub gets:
+
+| Pints | Stage | Effects |
+|---|---|---|
+| 1–2 | Sober | none |
+| 3–4 | Merry | warm glow, gentle background sway, faint double image on the marquee |
+| 5–6 | Tipsy | stronger sway, slow blur waves and colour drift in the background, Regulars sway |
+| 7–8 | Hammered | the scene tilts, double vision on the reels after each spin, hiccups, slurred messages |
+| Endless | Seeing double | all of the above at full strength |
+
+- The reels, numbers and buttons never blur; effects settle while you nudge, just after any tap, and in the Bar.
+- Settings → **Drunk effects**: Full / Light / Off. Always off with **Reduced effects** or the phone's reduce-motion setting.
+- Test with `?drunk=0..4`.
+
 ## Extras
 - **Album**: every Regular you've seen or recruited, and every Landlord you've faced or beaten.
 - **Run summary**: your line-up and stats at the end of a run, with a Share button.
@@ -130,6 +145,7 @@ That's what makes the "new version available" banner appear for everyone.
 - `js/machines.js`: starting machines
 - `js/scenery.js`: machine scenery, cabinet decorations and picker previews
 - `js/sfxmap.js`: sound effect mapping
+- `js/drunk.js`: drunk effects
 - `js/album.js`: the Album
 - `js/version.js`, `version.json`, `sw.js`: update notice and offline play
 - `icons/`, `manifest.json`: app icon and home-screen install
@@ -142,3 +158,5 @@ That's what makes the "new version available" banner appear for everyone.
 - Economy rework, Landlord's Specials ✅
 - Drop D: endless, bump & tilt, 8 Landlords, 6 Regulars, machines, album, speed, updates ✅
 - v1.6: machine themes ✅
+- v1.7–1.8: sound effects, Landlord music ✅
+- v1.9: drunk effects ✅

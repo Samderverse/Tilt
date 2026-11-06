@@ -325,4 +325,5 @@ export const sfx = {
   tilt: () => role('tilt', synth.wrong),
   wrong: () => synth.wrong(),
   cash: () => role('cash', synth.cash),
+  hic: () => { tone(520, 0.05, 'triangle', 0.09, 0, 900); tone(380, 0.06, 'sine', 0.05, 0.05, 300); },
 };

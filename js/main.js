@@ -13,6 +13,7 @@ import { openHowTo, bindHowTo } from './howto.js';
 import { tip, tipsOn, setTips, resetTips } from './coach.js';
 import { MACHINES, MACHINE_BY_ID, machineOf } from './machines.js';
 import { setScenery, miniCabinet } from './scenery.js';
+import * as Drunk from './drunk.js';
 import { VERSION } from './version.js';
 import { openAlbum, bindAlbum, seeRegular, ownRegular, faceBoss, beatBoss } from './album.js';
 
@@ -108,7 +109,7 @@ const fmtMult = (m) => (Number.isInteger(m) ? String(m) : m.toFixed(1));
 function bump(node) { node.classList.remove('bump'); void node.offsetWidth; node.classList.add('bump'); }
 
 function say(text, big = false) {
-  el.message.textContent = text;
+  el.message.textContent = big ? text : Drunk.slur(text);
   el.message.classList.toggle('big', big);
   if (big) bump(el.message);
 }
@@ -326,6 +327,8 @@ function showScreen(name) {
   setScenery(m ? m.id : '');
   const mq = document.getElementById('marquee-text');
   if (mq && m) mq.textContent = m.short || m.name;
+  if (run) Drunk.setPint(info().pint);
+  Drunk.setScreen(name);
 }
 
 // ---------- Spin animation ----------
@@ -512,6 +515,7 @@ async function doSpin() {
   if (s.swap) await animateSwap(s.swap);
   G.landed(run, s.swap);
   renderReelsStatic();
+  Drunk.afterSpin(el.reelsWrap);
   busy = false;
   save();
   if (run.phase === 'nudge') {
@@ -764,6 +768,14 @@ async function roundIntro() {
   busy = false;
   say('Press SPIN');
   renderControls();
+  // Getting drunker: announce each new stage once per run.
+  const st = Drunk.stage();
+  if (st > (run.drunkShown || 0)) {
+    run.drunkShown = st;
+    save();
+    toast(['', '🍺 Feeling merry…', '🍻 Getting tipsy…', '🥴 Absolutely hammered!', '😵‍💫 Seeing double!'][st] || '', 2600);
+    await tip('drunk', null, `Three pints in and the pub's starting to wobble. The more you drink, the wobblier it gets, but it always <b>settles while you're nudging</b>. Prefer a steady screen? <b>Settings → Drunk effects</b>.`);
+  }
   if (i.boss) {
     await tip('boss', el.bossStrip, `This is a <b>Landlord</b>. His rule lasts all round, and the bar shows his <b>patience</b> draining as you score. Tap his name any time to re-read the rule.`);
   } else if (i.round === 1) {
@@ -1254,6 +1266,8 @@ function applySettings() {
   A.setVolumes({ music: settings.music, ambience: settings.ambience, sfx: settings.sfx });
   A.setVibration(settings.vibration);
   FX.setReduced(settings.reducedFx);
+  Drunk.setReduced(settings.reducedFx);
+  Drunk.setMode(settings.drunkFx || 'full');
 }
 
 function openSettings() {
@@ -1264,6 +1278,8 @@ function openSettings() {
   el.optVibe.checked = settings.vibration;
   el.optTips.checked = tipsOn();
   el.optShake.checked = !!settings.shake;
+  $('drunk-seg').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.drunk === (settings.drunkFx || 'full')));
+  $('drunk-note').classList.toggle('hidden', !settings.reducedFx);
   el.speedSeg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', Number(b.dataset.speed) === speed()));
   el.versionLine.textContent = `Tilt v${VERSION}`;
   el.settings.classList.remove('hidden');
@@ -1297,6 +1313,14 @@ function bindSettings() {
     el.speedSeg.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
     A.sfx.tick();
   }));
+  $('drunk-seg').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+    settings = { ...settings, drunkFx: b.dataset.drunk };
+    saveSettings(settings);
+    applySettings();
+    $('drunk-seg').querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+    A.sfx.tick();
+  }));
+  el.optReduced.addEventListener('change', () => $('drunk-note').classList.toggle('hidden', !el.optReduced.checked));
   el.optShake.addEventListener('change', async () => {
     let on = el.optShake.checked;
     if (on && typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
@@ -1355,6 +1379,7 @@ function showUpdate(v) {
 // ---------- Boot ----------
 function boot() {
   FX.initFx();
+  Drunk.init({ onHiccup: () => A.sfx.hic() });
   A.preload();
   applySettings();
   bindSettings();

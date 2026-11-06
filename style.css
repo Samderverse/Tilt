@@ -1470,3 +1470,57 @@ body.reduced-fx .scenery .gull, body.reduced-fx .scenery .spark { display: none;
 body.reduced-fx .scenery .wave { animation: none; }
 .scenery .poster { opacity: .2; }
 
+
+/* =================== Drunk effects =================== */
+/* The Local gets a faint wallpaper so its room can sway too */
+body[data-machine="local"] .scenery {
+  background:
+    repeating-linear-gradient(90deg, rgba(255,210,150,.035) 0 2px, transparent 2px 30px),
+    radial-gradient(ellipse at top, var(--bg-2), var(--bg) 70%);
+}
+.scenery { will-change: transform, filter; transform-origin: 50% 45%; }
+#game-screen { transform-origin: 50% 60%; }
+
+/* Warm, boozy glow creeping in from the edges */
+.drunk-vignette {
+  position: fixed; inset: 0; z-index: 24; pointer-events: none; opacity: 0;
+  background:
+    radial-gradient(ellipse at center, transparent 45%, rgba(255,150,40,.20) 75%, rgba(150,60,10,.38) 100%),
+    radial-gradient(circle at 18% 12%, rgba(255,210,120,.12), transparent 40%),
+    radial-gradient(circle at 82% 88%, rgba(255,120,60,.10), transparent 45%);
+  mix-blend-mode: screen;
+}
+body.boss .drunk-vignette { mix-blend-mode: normal; }
+
+/* Lights glow brighter the more you've had */
+body[data-drunk="1"] .lights { filter: drop-shadow(0 0 4px var(--accent)); }
+body[data-drunk="2"] .lights, body[data-drunk="3"] .lights, body[data-drunk="4"] .lights {
+  filter: drop-shadow(0 0 6px var(--accent)) drop-shadow(0 0 12px var(--accent)); opacity: 1;
+}
+body[data-drunk="3"] .marquee, body[data-drunk="4"] .marquee { filter: brightness(1.12); }
+
+/* Double vision: a ghost of the reels slides out and back */
+.reels-ghost {
+  position: absolute; z-index: 5; pointer-events: none; margin: 0;
+  opacity: 0; mix-blend-mode: screen; animation: ghost 1.4s ease-in-out forwards;
+}
+@keyframes ghost {
+  0%   { opacity: 0;   transform: translate(0, 0); }
+  25%  { opacity: .38; transform: translate(var(--gx, 10px), 3px); }
+  55%  { opacity: .3;  transform: translate(calc(var(--gx, 10px) * -.6), -2px); }
+  100% { opacity: 0;   transform: translate(0, 0); }
+}
+
+/* Hiccups */
+#game-screen.hic { animation: hic .45s cubic-bezier(.3,1.8,.5,1); }
+@keyframes hic { 25% { translate: 0 -9px; } 55% { translate: 0 3px; } 100% { translate: 0 0; } }
+.hic-text {
+  position: fixed; top: 22%; z-index: 40; pointer-events: none; font-family: var(--font-chalk); font-size: 22px; color: #fff3c4;
+  text-shadow: 0 2px 6px rgba(0,0,0,.7); animation: hic-float 1.4s ease-out forwards;
+}
+@keyframes hic-float { 0% { opacity: 0; transform: translateY(10px) rotate(-8deg) scale(.6); } 20% { opacity: 1; transform: translateY(0) rotate(-4deg) scale(1.1); } 100% { opacity: 0; transform: translateY(-40px) rotate(6deg); } }
+
+.setting-note { margin: 0 0 4px; font-size: 12px; opacity: .65; }
+
+body.reduced-fx .drunk-vignette, body.reduced-fx .reels-ghost, body.reduced-fx .hic-text { display: none; }
+@media (prefers-reduced-motion: reduce) { .drunk-vignette, .reels-ghost, .hic-text { display: none; } }

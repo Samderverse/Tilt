@@ -10,6 +10,7 @@ export const DEFAULTS = {
   vibration: true,
   speed: 1,        // scoring animation speed: 1, 2 or 4
   shake: false,    // shake the phone to bump
+  drunkFx: 'full', // drunk effects: 'full', 'light' or 'off' (always off with reducedFx)
 };
 
 export function loadSettings() {
