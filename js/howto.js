@@ -32,9 +32,14 @@ export const PAGES = [
     body: '<b>Nudge</b> after a spin to move a reel one step, then <b>Collect</b>. <b>Hold</b> reels before a spin to keep them. You get a few of each per round, so use them wisely.',
   },
   {
+    title: 'Bump & Tilt',
+    art: `<div class="ht-btns"><span class="hb bumpdemo">BUMP<small>10% tilt</small></span></div>`,
+    body: 'After a spin you can <b>BUMP</b> the machine: every reel jolts up or down at random. It\'s free, but every bump raises the <b>tilt</b> risk for the round, and a tilt means that spin scores nothing.',
+  },
+  {
     title: 'Pints & Landlords',
     art: `<div class="ht-pints"><span>Half<br>Pint</span><span>Full<br>Pint</span><span class="boss">😠<br>Landlord</span></div>`,
-    body: 'Rounds come in <b>Pints</b> of three. The third is a <b>Landlord</b> with a nasty rule. You\'ll hear who\'s coming before you get there. Beat 8 Landlords to win.',
+    body: 'Rounds come in <b>Pints</b> of three. The third is a <b>Landlord</b> with a nasty rule. You\'ll hear who\'s coming before you get there. Beat 8 Landlords to win, then keep going in <b>Endless</b> if you dare.',
   },
   {
     title: 'The Bar',

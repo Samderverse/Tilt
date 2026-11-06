@@ -11,6 +11,9 @@ import { loadSettings, saveSettings, CREDITS } from './settings.js';
 import { regularCard, itemArt, crispPacket, hueOf } from './art.js';
 import { openHowTo, bindHowTo } from './howto.js';
 import { tip, tipsOn, setTips, resetTips } from './coach.js';
+import { MACHINES, MACHINE_BY_ID, machineOf } from './machines.js';
+import { VERSION } from './version.js';
+import { openAlbum, bindAlbum, seeRegular, ownRegular, faceBoss, beatBoss } from './album.js';
 
 const SAVE_KEY = 'tilt.run.v3';
 const BEST_KEY = 'tilt.best.v2';
@@ -38,6 +41,9 @@ const el = {
   volMusic: $('vol-music'), volAmb: $('vol-ambience'), volSfx: $('vol-sfx'),
   optReduced: $('opt-reduced'), optVibe: $('opt-vibration'), abandon: $('abandon-btn'),
   credits: $('credits-list'),
+  bumpBtn: $('bump-btn'), bumpRisk: $('bump-risk'),
+  albumBtn: $('album-btn'), settingsAlbum: $('settings-album'), speedSeg: $('speed-seg'), optShake: $('opt-shake'),
+  versionLine: $('version-line'), machines: $('machines'), machineList: $('machine-list'), machinesCancel: $('machines-cancel'),
   howtoBtn: $('howto-btn'), tutorialBtn: $('tutorial-btn'), settingsHowto: $('settings-howto'), optTips: $('opt-tips'),
   // Bar
   barNext: $('bar-next'), barMoney: $('bar-money'), barRegs: $('bar-regulars'), barRegCount: $('bar-reg-count'),
@@ -64,17 +70,37 @@ function load() {
 }
 function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch {} }
 function getBest() { try { return Number(localStorage.getItem(BEST_KEY)) || 0; } catch { return 0; } }
+const unlockedMachines = (best = getBest()) => MACHINES.filter((m) => m.unlock <= best);
 function setBest(roundsCleared) {
-  try { if (roundsCleared > getBest()) localStorage.setItem(BEST_KEY, String(roundsCleared)); } catch {}
+  const before = getBest();
+  if (roundsCleared <= before) return;
+  try { localStorage.setItem(BEST_KEY, String(roundsCleared)); } catch {}
+  const fresh = MACHINES.filter((m) => m.unlock > before && m.unlock <= roundsCleared);
+  if (fresh.length) setTimeout(() => toast(`🔓 New machine unlocked: ${fresh.map((m) => m.icon + ' ' + m.name).join(', ')}`, 3500), 600);
 }
 function bestText() {
   const b = getBest();
   if (!b) return '';
-  return `Best: ${b} round${b === 1 ? '' : 's'} cleared (Pint ${Math.min(G.CONFIG.pintsToWin, Math.floor(b / 3) + 1)})`;
+  if (b >= G.CONFIG.pintsToWin * 3) {
+    const pint = Math.floor(b / 3) + 1;
+    return b > G.CONFIG.pintsToWin * 3 ? `Best: Endless, Pint ${pint}` : 'Best: beat the pub 🏆';
+  }
+  return `Best: ${b} round${b === 1 ? '' : 's'} cleared (Pint ${Math.floor(b / 3) + 1})`;
 }
 
 // ---------- Helpers ----------
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const speed = () => settings.speed || 1;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms / speed()));
+
+// 12,450 · 450K · 1.2M · 3.4B: keeps big endless-mode numbers readable.
+function fmt(n) {
+  if (typeof n !== 'number') return n;
+  n = Math.floor(n);
+  if (n >= 1e9) return (n / 1e9).toFixed(n >= 1e10 ? 0 : 1) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M';
+  if (n >= 1e5) return Math.round(n / 1e3) + 'K';
+  return n.toLocaleString('en-GB');
+}
 const info = () => G.roundInfo(run);
 const fmtMult = (m) => (Number.isInteger(m) ? String(m) : m.toFixed(1));
 
@@ -87,8 +113,8 @@ function say(text, big = false) {
 }
 
 function setCalc(coins, mult, preview = false) {
-  el.coins.textContent = coins;
-  el.mult.textContent = fmtMult(mult);
+  el.coins.textContent = fmt(coins);
+  el.mult.textContent = typeof mult === 'number' ? (mult >= 1e5 ? fmt(mult) : fmtMult(mult)) : mult;
   el.calc.classList.toggle('preview', preview);
 }
 
@@ -133,11 +159,17 @@ function renderReelsStatic() {
   applyDark();
 }
 
+const isDarkBoss = () => { const b = info().boss; return !!(b?.darkRows || b?.darkCols); };
 function applyDark(reveal = false) {
-  const rows = info().boss?.darkRows || [];
+  const b = info().boss;
+  const rows = b?.darkRows || [];
+  const cols = b?.darkCols || [];
   for (let c = 0; c < 3; c++) {
-    for (let r = 0; r < 3; r++) cellAt(r, c)?.classList.toggle('dark', !reveal && rows.includes(r));
+    for (let r = 0; r < 3; r++) cellAt(r, c)?.classList.toggle('dark', !reveal && (rows.includes(r) || cols.includes(c)));
   }
+  const jam = b?.jammed;
+  el.reels.forEach((reel, i) => reel.classList.toggle('jammed', jam === i));
+  el.ctrls.forEach((ctrl, i) => ctrl.classList.toggle('jammed', jam === i));
 }
 
 function renderMoney() {
@@ -148,9 +180,10 @@ function renderMoney() {
 function renderHUD() {
   const i = info();
   el.pint.textContent = `Pint ${i.pint}`;
-  el.kind.textContent = i.boss ? `Landlord · Round ${i.round}` : `${i.kind.name} · Round ${i.round}`;
+  const where = i.endless ? 'Endless' : `Round ${i.round}`;
+  el.kind.textContent = i.boss ? `Landlord · ${where}` : `${i.kind.name} · ${where}`;
   renderMoney();
-  el.target.textContent = i.target;
+  el.target.textContent = fmt(i.target);
   el.spins.textContent = run.spinsLeft;
   el.holds.textContent = run.holdsLeft;
   el.nudges.textContent = run.nudgesLeft;
@@ -162,13 +195,13 @@ function renderHUD() {
     el.targetLabel.textContent = 'Patience';
     el.fill.style.width = (100 - pct) + '%';
     const left = Math.max(0, i.target - run.score);
-    el.barText.textContent = left ? `Patience ${left}` : 'SNAPPED';
+    el.barText.textContent = left ? `Patience ${fmt(left)}` : 'SNAPPED';
     const pulse = run.spinsLeft <= 1 ? '.55s' : run.spinsLeft <= 2 ? '1s' : '2.4s';
     document.documentElement.style.setProperty('--pulse', pulse);
   } else {
     el.targetLabel.textContent = 'Target';
     el.fill.style.width = pct + '%';
-    el.barText.textContent = `${run.score} / ${i.target}`;
+    el.barText.textContent = `${fmt(run.score)} / ${fmt(i.target)}`;
   }
 
   const bossChanged = el.bossStrip.classList.contains('hidden') === !!i.boss;
@@ -199,8 +232,10 @@ function renderRegulars(container, where) {
     const r = run.regulars[i];
     if (!r) { cards.push(`<div class="reg-card empty"></div>`); continue; }
     const d = REG_BY_ID[r.id];
-    const b = regBadge(r);
-    cards.push(`<button class="reg-card r-${d.rarity}" data-slot="${i}" style="--h:${hueOf(r.id)}">
+    const barred = where === 'game' && i === 0 && info().boss?.barFirst;
+    const b = barred ? '🚫' : regBadge(r);
+    ownRegular(r.id);
+    cards.push(`<button class="reg-card r-${d.rarity}${barred ? ' barred' : ''}" data-slot="${i}" style="--h:${hueOf(r.id)}">
       <span class="rc-portrait"><span class="face">${d.face}</span></span><span class="nm">${d.name}</span>${b ? `<span class="badge">${b}</span>` : ''}</button>`);
   }
   container.innerHTML = cards.join('');
@@ -216,13 +251,22 @@ function renderControls() {
     hold.classList.toggle('on', run.held[i]);
     hold.disabled = !G.canHold(run, i);
     hold.textContent = run.held[i] ? 'HELD' : run.lastHeld[i] && run.spinsThisRound > 0 ? 'COOL' : 'HOLD';
-    ctrl.querySelectorAll('.nudge-btn').forEach((b) => (b.disabled = run.nudgesLeft <= 0 || phase !== 'nudge'));
+    ctrl.querySelectorAll('.nudge-btn').forEach((b) => (b.disabled = phase !== 'nudge' || !G.canNudge(run, i)));
     el.reels[i].classList.toggle('held', run.held[i]);
   });
   const collecting = run.phase === 'nudge';
   el.spinBtn.textContent = collecting ? 'COLLECT' : 'SPIN';
   el.spinBtn.classList.toggle('collect', collecting);
   el.spinBtn.disabled = busy || !(run.phase === 'ready' || run.phase === 'nudge');
+  const bumpable = run.phase === 'nudge' && G.canBump(run) && !run.tilted;
+  el.bumpBtn.classList.toggle('hidden', !bumpable);
+  el.bumpBtn.disabled = busy || !bumpable;
+  if (bumpable) {
+    const c = Math.round(G.tiltChance(run) * 100);
+    el.bumpRisk.textContent = `${c}% tilt`;
+    el.bumpBtn.style.setProperty('--risk', c / 100);
+    el.bumpBtn.classList.toggle('risky', c >= 50);
+  }
 }
 
 function applyTheme() {
@@ -280,8 +324,8 @@ function showScreen(name) {
 // ---------- Spin animation ----------
 async function animateSpin(s) {
   const size = cellSize();
-  const durations = [850, 1100, 1350];
-  const dark = !!info().boss?.darkRows;
+  const durations = [850, 1100, 1350].map((d) => Math.max(260, d / speed()));
+  const b = info().boss;
   const jobs = el.reels.map((reelEl, i) => {
     if (s.heldMask[i]) return Promise.resolve();
     const strip = run.reels[i];
@@ -292,7 +336,7 @@ async function animateSpin(s) {
     const node = reelEl.querySelector('.strip');
     node.style.transition = 'none';
     node.innerHTML = all.map(cellHTML).join('');
-    if (dark) node.querySelectorAll('.cell').forEach((c) => c.classList.add('dark'));
+    if (b?.darkRows || b?.darkCols?.includes(i)) node.querySelectorAll('.cell').forEach((c) => c.classList.add('dark'));
     node.style.transform = `translateY(${-(all.length - 3) * size}px)`;
     void node.offsetWidth;
     reelEl.classList.add('spinning');
@@ -382,7 +426,7 @@ async function onNudge(i, dir) {
   busy = false;
   save();
   showPreview();
-  if (run.nudgesLeft <= 0) {
+  if (run.nudgesLeft <= 0 && !G.canBump(run)) {
     renderControls();
     await sleep(250);
     await doCollect();
@@ -391,11 +435,50 @@ async function onNudge(i, dir) {
   }
 }
 
+// ---------- Bump ----------
+async function onBump() {
+  if (busy || run.phase !== 'nudge') return;
+  const res = G.bump(run);
+  if (!res) { A.sfx.denied(); return; }
+  busy = true;
+  renderControls();
+  A.sfx.swap();
+  A.buzz([25, 30, 25]);
+  if (res.tilted) {
+    FX.shake(el.game, 'big');
+    FX.glitch(el.machine, 800);
+    FX.flash('#ff2a2a', 500);
+    A.sfx.wrong();
+    say(`TILT! The machine locks up. This spin scores nothing.`);
+    await FX.stamp('TILT!', '#ff4b3a', 1300 / speed());
+    busy = false;
+    save();
+    await doCollect();
+    return;
+  }
+  FX.shake(el.machine);
+  await Promise.all(res.moves.map((d, i) => (d ? animateNudge(i, d) : null)));
+  busy = false;
+  save();
+  renderHUD();
+  renderRegulars(el.regs, 'game');
+  showPreview();
+  renderControls();
+}
+
 function showPreview() {
+  const opts = [];
+  if (run.nudgesLeft > 0) opts.push(run.nudgesLeft === 1 ? 'Nudge (1 left)' : `Nudge (${run.nudgesLeft} left)`);
+  if (G.canBump(run)) opts.push('BUMP');
+  const how = opts.length ? `${opts.join(', ')} or COLLECT.` : 'COLLECT.';
+  if (isDarkBoss()) {
+    setCalc('?', '?', true);
+    say(`Too dark to tell what it's worth. ${how}`);
+    return;
+  }
   const p = G.preview(run);
   setCalc(p.coins, p.mult, true);
-  const extra = run.nudgesLeft === 1 ? '1 nudge' : `${run.nudgesLeft} nudges`;
-  say(p.total ? `Showing +${p.total}. Nudge (${extra}) or COLLECT.` : `Nothing yet. Nudge (${extra}) or COLLECT.`);
+  say(p.total ? `Showing +${fmt(p.total)}. ${how}` : `Nothing yet. ${how}`);
 }
 
 async function onSpinButton() {
@@ -416,6 +499,7 @@ async function doSpin() {
   renderHUD();
   renderControls();
   A.sfx.spin();
+  if (s.paid) { toast(`${info().boss.name}: £${s.paid} on the tab`); bump(el.money); A.sfx.cash(); }
   await animateSpin(s);
   if (s.swap) await animateSwap(s.swap);
   G.landed(run, s.swap);
@@ -428,6 +512,7 @@ async function doSpin() {
     await tip('nudge', document.querySelector('.controls'), `The reels have landed. Use <b>▲ ▼</b> to <b>nudge</b> a reel one step and line up matches. You get a couple per round.`, { place: 'below' });
     await tip('preview', el.calc, `This shows what the spin is worth right now: <b>Coins × Multi</b>. It updates as you nudge.`);
     await tip('collect', el.spinBtn, `Happy with it? Tap <b>COLLECT</b> to bank the score.`);
+    if (G.canBump(run)) await tip('bump', el.bumpBtn, `Feeling lucky? <b>BUMP</b> jolts every reel up or down at random. Each bump this round raises the chance the machine <b>TILTS</b>, and a tilt scores nothing.`);
   } else {
     await doCollect();
   }
@@ -484,7 +569,7 @@ function popRegular(slot, effect) {
 async function playResult(result) {
   const i = info();
   setCalc(0, BASE_MULT);
-  if (i.boss?.darkRows) { applyDark(true); FX.flash('#fff6c8', 250); await sleep(300); }
+  if (isDarkBoss()) { applyDark(true); FX.flash('#fff6c8', 250); await sleep(300); }
 
   if (result.blocked.length) {
     for (const w of result.blocked) lineEl(w.line.id).classList.add('blocked');
@@ -494,17 +579,17 @@ async function playResult(result) {
     el.paylines.forEach((p) => p.classList.remove('blocked'));
   }
 
-  if (result.voided && result.voidedWins.length) {
+  if (result.voided && !result.tilted && result.voidedWins.length) {
     A.sfx.wrong();
     FX.shake(el.machine);
     A.buzz([60, 40, 60]);
     say('The Quiz Master buzzes you off.');
-    await FX.stamp('WRONG ANSWER!', '#ff4b3a', 1200);
+    await FX.stamp('WRONG ANSWER!', '#ff4b3a', 1200 / speed());
   }
 
   if (!result.wins.length) {
     // Regulars can still react to a losing spin (Quentin banks Multi).
-    for (const st of result.steps) { popRegular(st.slot, st.effect); A.sfx.tick(); await sleep(450); }
+    for (const st of result.steps) { if (st.kind === 'reg') popRegular(st.slot, st.effect); A.sfx.tick(); await sleep(450); }
     if (!result.voided) { A.sfx.blank(); say(pick(BLANK_LINES)); }
     return;
   }
@@ -532,6 +617,13 @@ async function playResult(result) {
       A.sfx.win(lineNo++);
       A.sfx.coin();
       await sleep(420);
+    } else if (st.kind === 'boss') {
+      setCalc(st.coins, st.mult);
+      say(st.text);
+      bump(el.mult);
+      FX.shake(el.calc);
+      A.sfx.blocked();
+      await sleep(550);
     } else {
       popRegular(st.slot, st.effect);
       setCalc(st.coins, st.mult);
@@ -548,7 +640,7 @@ async function playResult(result) {
   el.paylines.forEach((p) => p.classList.remove('on'));
 
   const total = result.total;
-  say(`+${total}`, true);
+  say(`+${fmt(total)}`, true);
   const big = result.mult >= 8 || result.wins.length >= 3 || total >= i.target * 0.5;
 
   if (result.onFire) {
@@ -582,7 +674,7 @@ function hot() {
 
 async function tickScore(amount) {
   const start = run.score - amount;
-  const steps = Math.min(20, amount);
+  const steps = Math.min(20, amount, Math.max(4, Math.round(20 / speed())));
   for (let k = 1; k <= steps; k++) {
     const shown = Math.round(start + (amount * k) / steps);
     const real = run.score;
@@ -596,7 +688,7 @@ async function tickScore(amount) {
 }
 
 // ---------- Overlays ----------
-function showOverlay({ face = null, kicker = '', title, body, btn, slam = false, titleClass = '', foot = '' }) {
+function showOverlay({ face = null, kicker = '', title, body, btn, slam = false, titleClass = '', foot = '', alt = '' }) {
   return new Promise((resolve) => {
     el.oFace.classList.toggle('hidden', !face);
     el.oFace.textContent = face || '';
@@ -604,19 +696,19 @@ function showOverlay({ face = null, kicker = '', title, body, btn, slam = false,
     el.oTitle.textContent = title;
     el.oTitle.className = titleClass;
     el.oBody.innerHTML = body;
-    el.oFoot.innerHTML = foot;
+    el.oFoot.innerHTML = (alt ? `<button class="menu-btn wide alt-btn">${alt}</button>` : '') + foot;
+    const finish = (val) => { el.overlay.classList.add('hidden'); A.setMuffled(false); resolve(val); };
+    const altBtn = el.oFoot.querySelector('.alt-btn');
+    if (altBtn) altBtn.onclick = () => { A.unlock(); finish('alt'); };
+    const share = el.oFoot.querySelector('#share-run');
+    if (share) share.onclick = shareRun;
     el.oBtn.textContent = btn;
     el.panel.classList.remove('slam');
     void el.panel.offsetWidth;
     if (slam) el.panel.classList.add('slam');
     el.overlay.classList.remove('hidden');
     A.setMuffled(true);
-    el.oBtn.onclick = () => {
-      A.unlock();
-      el.overlay.classList.add('hidden');
-      A.setMuffled(false);
-      resolve();
-    };
+    el.oBtn.onclick = () => { A.unlock(); finish('main'); };
   });
 }
 
@@ -631,16 +723,17 @@ async function roundIntro() {
   showScreen('game');
   renderAll();
   if (i.boss) {
+    faceBoss(i.boss.id);
     A.sfx.slam();
     FX.flash('#ff2a2a', 500);
     FX.shake(el.game, 'big');
     A.buzz([80, 40, 120]);
     await showOverlay({
       face: i.boss.face,
-      kicker: `Pint ${i.pint} · The Landlord`,
+      kicker: `Pint ${i.pint}${i.endless ? ' · Endless' : ''} · The Landlord`,
       title: i.boss.name,
       body: `<p class="rule-box">${i.boss.rule}</p>
-             <p>Wear down <b>${i.target}</b> patience in <b>${run.spinsLeft}</b> spins.</p>`,
+             <p>Wear down <b>${fmt(i.target)}</b> patience in <b>${run.spinsLeft}</b> spins.</p>`,
       btn: 'Bring it on',
       slam: true,
     });
@@ -652,9 +745,9 @@ async function roundIntro() {
     const b = bossRound.boss;
     const when = bossRound.round - i.round === 1 ? 'next round' : 'two rounds from now';
     await showOverlay({
-      kicker: `Pint ${i.pint} · Round ${i.round}`,
+      kicker: i.endless ? `Pint ${i.pint} · Endless` : `Pint ${i.pint} · Round ${i.round}`,
       title: i.kind.name,
-      body: `<p>Score <b>${i.target}</b> in <b>${run.spinsLeft}</b> spins.</p>${tip}`,
+      body: `<p>Score <b>${fmt(i.target)}</b> in <b>${run.spinsLeft}</b> spins.</p>${tip}`,
       btn: i.round === 1 ? 'Insert coin' : 'Spin up',
       foot: `<div class="rumour"><span class="boss-face">${b.face}</span>
         <span>Word at the bar: the Landlord at the end of this Pint (${when}) is <b>${b.name}</b>. ${b.rule}</span></div>`,
@@ -680,7 +773,8 @@ async function bossDefeated() {
   FX.burstFrom(el.reelsWrap, 70, 'confetti', 1.6);
   A.buzz([60, 40, 60, 40, 200]);
   el.bar.classList.remove('on-fire');
-  await FX.stamp('LANDLORD BEATEN', 'var(--gold)', 1500);
+  beatBoss(info().boss.id);
+  await FX.stamp('LANDLORD BEATEN', 'var(--gold)', 1500 / speed());
 }
 
 async function roundCleared() {
@@ -690,9 +784,9 @@ async function roundCleared() {
   setBest(run.round);
   const regRows = pay.regs.map((x) => `<tr><td>${REG_BY_ID[run.regulars[x.slot].id].name}</td><td>£${x.money}</td></tr>`).join('');
   await showOverlay({
-    kicker: `Pint ${i.pint} · Round ${i.round}`,
+    kicker: i.endless ? `Pint ${i.pint} · Endless` : `Pint ${i.pint} · Round ${i.round}`,
     title: i.boss ? 'Landlord beaten!' : 'Round cleared!',
-    body: `<p>Scored <b>${run.score}</b> / ${i.target}</p>
+    body: `<p>Scored <b>${fmt(run.score)}</b> / ${fmt(i.target)}</p>
       <table class="pay-table">
         <tr><td>${i.kind.name} reward</td><td>£${pay.reward}</td></tr>
         <tr><td>Spare spins (£1 each, max £${G.CONFIG.spareCap})</td><td>£${pay.spare}</td></tr>
@@ -712,12 +806,40 @@ async function roundCleared() {
 
 function statsHTML() {
   const s = run.stats;
-  return `<div class="stats">
-    <div><b>${info().pint}</b>Pint reached</div>
+  const m = machineOf(run);
+  const i = info();
+  const lineup = run.regulars.length
+    ? `<div class="lineup">${run.regulars.map((r) => regularCard(r.id, 'sm')).join('')}</div>`
+    : '<p class="muted">No Regulars this time.</p>';
+  return `<p class="summary-machine">${m.icon} ${m.name}${run.endless ? ' · Endless' : ''}</p>
+  ${lineup}
+  <div class="stats">
+    <div><b>${i.pint}</b>Pint reached</div>
     <div><b>${s.bossesBeaten}</b>Landlords beaten</div>
-    <div><b>${s.bestSpin}</b>Best spin</div>
-    <div><b>${run.regulars.length}</b>Regulars</div>
+    <div><b>${fmt(s.bestSpin)}</b>Best spin</div>
+    <div><b>${s.tilts || 0}</b>Tilts</div>
   </div><p class="muted">Seed ${run.seed}</p>`;
+}
+
+const SHARE_FOOT = '<button class="menu-btn wide" id="share-run">📤 Share this run</button>';
+
+async function shareRun() {
+  const s = run.stats;
+  const m = machineOf(run);
+  const i = info();
+  const head = run.phase === 'won' ? '🏆 Beat the pub!' : run.endless ? `🍺 Endless, Pint ${i.pint}` : `💀 Tilted on Pint ${i.pint}`;
+  const text = [
+    `🎰 Tilt: ${head}`,
+    `${m.icon} ${m.name}`,
+    `👑 ${s.bossesBeaten} Landlords beaten · 💥 Best spin ${fmt(s.bestSpin)}`,
+    `🧑‍🤝‍🧑 ${run.regulars.map((r) => REG_BY_ID[r.id].face).join(' ') || 'No Regulars'}`,
+    location.origin + location.pathname,
+  ].join('\n');
+  try {
+    if (navigator.share) { await navigator.share({ text }); return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(text); toast('Copied! Paste it in the group chat.'); }
+  catch { toast('Couldn\'t share from this browser.'); }
 }
 
 async function gameOver() {
@@ -730,32 +852,43 @@ async function gameOver() {
   const i = info();
   await showOverlay({
     face: i.boss ? i.boss.face : null,
-    kicker: i.boss ? `${i.boss.name} wins` : `Round ${i.round}`,
+    kicker: i.boss ? `${i.boss.name} wins` : (i.endless ? `Endless · Pint ${i.pint}` : `Round ${i.round}`),
     title: 'TILT!',
     titleClass: 'tilt-title glitch',
-    body: `<p>${run.score} / ${i.target}. The machine takes your last coin.</p>${statsHTML()}`,
+    body: `<p>${fmt(run.score)} / ${fmt(i.target)}. The machine takes your last coin.</p>${statsHTML()}`,
     btn: 'Play again',
+    foot: SHARE_FOOT,
   });
   document.body.classList.remove('boss');
-  startRun(G.newRun(randomSeed()));
+  newRunFlow(true);
 }
 
 async function victory() {
-  clearSave();
   setBest(run.round);
   document.body.classList.remove('boss');
   A.setBossMode(false);
   FX.burst(innerWidth / 2, innerHeight / 2, 120, 'confetti', 2);
   FX.flash('#ffc23d', 800);
   A.sfx.clear();
-  await showOverlay({
+  save();
+  const choice = await showOverlay({
     face: '🏆',
     kicker: 'Last orders',
     title: 'You beat the pub!',
-    body: `<p>Every Landlord down. The machine is yours.</p>${statsHTML()}`,
-    btn: 'New run',
+    body: `<p>Every Landlord down. The machine is yours.</p>${statsHTML()}
+      <p class="endless-pitch"><b>Fancy another?</b> Keep everything you've got and go round the Landlords again, with targets that keep climbing.</p>`,
+    btn: 'Keep drinking 🍺',
+    alt: 'Call it a night',
+    foot: SHARE_FOOT,
   });
-  startRun(G.newRun(randomSeed()));
+  if (choice === 'alt') {
+    clearSave();
+    return newRunFlow(true);
+  }
+  G.goEndless(run);
+  save();
+  toast('Endless mode: how far can you go?', 2600);
+  enterBar();
 }
 
 // ---------- The Bar ----------
@@ -799,6 +932,7 @@ function renderBar() {
   S.refreshPrices(run);
   renderRegulars(el.barRegs, 'bar');
   el.barRegCount.textContent = `${run.regulars.length} / ${maxRegulars(run)}`;
+  run.bar.items.forEach((it) => { if (it.type === 'regular') seeRegular(it.id); });
   el.stock.innerHTML = run.bar.items.map((it, i) => itemCardHTML(it, i, 'item')).join('');
   el.packets.innerHTML = run.bar.packets.map((it, i) => itemCardHTML(it, i, 'packet')).join('');
   const sp = run.bar.special;
@@ -848,7 +982,7 @@ function regStatus(slot) {
     const rd = REG_BY_ID[right.id];
     return rd.copies ? 'Copying: another Barman, which does nothing' : `Copying: ${rd.name}`;
   }
-  return d.status ? d.status(r.state) : '';
+  return d.status ? d.status(r.state, run) : '';
 }
 
 function openRegularSheet(slot, where) {
@@ -998,6 +1132,7 @@ function openPacket(pending) {
     el.packetBag.classList.add('open');
     A.sfx.shatter();
     FX.burstFrom(el.packetBag, 24, 'confetti', 0.9);
+    pending.choices.forEach((c) => { if (c.type === 'regular') seeRegular(c.id); });
     el.packetChoices.innerHTML = pending.choices.map((c, i) => {
       const inf = S.itemInfo(c);
       return `<button class="item choice item-${c.type}" data-i="${i}" style="--ic:${inf.colour}">
@@ -1056,7 +1191,7 @@ async function startRun(r, resumed = false) {
 
   if (run.phase === 'bar') return enterBar();
   showScreen('game');
-  if (run.phase === 'spinning') run.phase = run.nudgesLeft > 0 ? 'nudge' : 'scoring';
+  if (run.phase === 'spinning') run.phase = run.nudgesLeft > 0 || G.canBump(run, true) ? 'nudge' : 'scoring';
   renderAll();
   if (run.phase === 'cleared') { busy = true; renderControls(); return roundCleared(); }
   if (run.phase === 'scoring') return doCollect();
@@ -1076,6 +1211,36 @@ const BLANK_LINES = [
 ];
 function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
 
+// ---------- New runs & the machine picker ----------
+function chooseMachine() {
+  const open = unlockedMachines();
+  if (open.length <= 1) return Promise.resolve('local');
+  return new Promise((resolve) => {
+    const best = getBest();
+    el.machineList.innerHTML = MACHINES.map((m) => {
+      const locked = m.unlock > best;
+      return `<button class="machine-card${locked ? ' locked' : ''}" data-id="${m.id}" ${locked ? 'disabled' : ''}>
+        <span class="mc-icon">${locked ? '🔒' : m.icon}</span>
+        <span class="mc-text"><b>${m.name}</b><span>${locked ? m.unlockText : m.desc}</span></span></button>`;
+    }).join('');
+    const done = (id) => { el.machines.classList.add('hidden'); resolve(id); };
+    el.machineList.querySelectorAll('.machine-card:not(.locked)').forEach((b) => b.addEventListener('click', () => { A.sfx.coin(); done(b.dataset.id); }));
+    el.machinesCancel.onclick = () => done(null);
+    el.machines.classList.remove('hidden');
+  });
+}
+
+async function newRunFlow(fromEnd = false) {
+  const id = await chooseMachine();
+  if (!id) {
+    if (fromEnd) { showScreen('title'); el.start.textContent = 'Tap to Play'; el.newRun.classList.add('hidden'); el.best.textContent = bestText(); }
+    return;
+  }
+  A.playMusic('main');
+  clearSave();
+  startRun(G.newRun(randomSeed(), id));
+}
+
 // ---------- Settings ----------
 function applySettings() {
   A.setVolumes({ music: settings.music, ambience: settings.ambience, sfx: settings.sfx });
@@ -1090,6 +1255,9 @@ function openSettings() {
   el.optReduced.checked = settings.reducedFx;
   el.optVibe.checked = settings.vibration;
   el.optTips.checked = tipsOn();
+  el.optShake.checked = !!settings.shake;
+  el.speedSeg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', Number(b.dataset.speed) === speed()));
+  el.versionLine.textContent = `Tilt v${VERSION}`;
   el.settings.classList.remove('hidden');
   A.setMuffled(true);
 }
@@ -1102,6 +1270,7 @@ function closeSettings() {
 function bindSettings() {
   const onChange = () => {
     settings = {
+      ...settings,
       music: Number(el.volMusic.value),
       ambience: Number(el.volAmb.value),
       sfx: Number(el.volSfx.value),
@@ -1114,6 +1283,23 @@ function bindSettings() {
   [el.volMusic, el.volAmb, el.volSfx, el.optReduced, el.optVibe].forEach((n) => n.addEventListener('input', onChange));
   el.volSfx.addEventListener('change', () => A.sfx.coin());
   el.optTips.addEventListener('change', () => { if (el.optTips.checked) resetTips(); else setTips(false); });
+  el.speedSeg.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+    settings = { ...settings, speed: Number(b.dataset.speed) };
+    saveSettings(settings);
+    el.speedSeg.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+    A.sfx.tick();
+  }));
+  el.optShake.addEventListener('change', async () => {
+    let on = el.optShake.checked;
+    if (on && typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      try { on = (await DeviceMotionEvent.requestPermission()) === 'granted'; } catch { on = false; }
+      if (!on) toast('Motion access was declined, so shaking is off.');
+    }
+    el.optShake.checked = on;
+    settings = { ...settings, shake: on };
+    saveSettings(settings);
+  });
+  el.settingsAlbum.addEventListener('click', () => { closeSettings(); openAlbum(); });
   el.settingsBtn.addEventListener('click', () => { A.unlock(); openSettings(); });
   el.barSettingsBtn.addEventListener('click', () => { A.unlock(); openSettings(); });
   el.settingsClose.addEventListener('click', closeSettings);
@@ -1134,6 +1320,30 @@ function bindSettings() {
     '<li><b>Game:</b> Tilt by Samderverse</li>';
 }
 
+// ---------- Updates & offline ----------
+function setupUpdates() {
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+  const check = () => fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((v) => { if (v && v.version && v.version !== VERSION) showUpdate(v.version); })
+    .catch(() => {});
+  check();
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+}
+
+function showUpdate(v) {
+  if (document.querySelector('.update-banner')) return;
+  const b = document.createElement('div');
+  b.className = 'update-banner';
+  b.innerHTML = `<span>🍺 A new version of Tilt is ready (v${v}).</span>
+    <span class="ub-actions"><button class="link-btn ub-later">Later</button><button class="restock-btn ub-go">Refresh</button></span>`;
+  b.querySelector('.ub-go').addEventListener('click', () => { save(); location.reload(); });
+  b.querySelector('.ub-later').addEventListener('click', () => b.remove());
+  document.body.appendChild(b);
+}
+
 // ---------- Boot ----------
 function boot() {
   FX.initFx();
@@ -1152,7 +1362,7 @@ function boot() {
 
   // Test shortcuts: ?round=3, ?boss=uncle, ?money=50, ?regs=penny,jen, ?bar=1 (open the Bar first)
   const debugRun = () => {
-    const r = G.newRun((forcedSeed || randomSeed()).toUpperCase());
+    const r = G.newRun((forcedSeed || randomSeed()).toUpperCase(), params.get('machine') || 'local');
     const boss = params.get('boss');
     if (boss) r.bossOrder = [boss, ...r.bossOrder.filter((b) => b !== boss)];
     const round = Number(params.get('round'));
@@ -1161,6 +1371,7 @@ function boot() {
       const pint = Math.ceil(round / 3);
       if (boss) r.bossOrder = Array(pint - 1).fill(r.bossOrder[1]).concat(r.bossOrder);
     }
+    if (r.round > G.CONFIG.pintsToWin * 3) r.endless = true;
     if (params.get('money')) r.money = Number(params.get('money'));
     if (params.get('regs')) params.get('regs').split(',').filter((id) => REG_BY_ID[id]).slice(0, 6).forEach((id) => S.addRegular(r, id));
     if (params.get('specials')) r.specials = params.get('specials').split(',').filter((id) => S.SPECIAL_BY_ID[id]);
@@ -1168,16 +1379,17 @@ function boot() {
     if (params.get('bar')) { S.openBar(r); r.phase = 'bar'; }
     return r;
   };
-  const isDebug = ['seed', 'round', 'boss', 'money', 'regs', 'bar'].some((k) => params.has(k));
+  const isDebug = ['seed', 'round', 'boss', 'money', 'regs', 'bar', 'machine', 'specials'].some((k) => params.has(k));
 
   el.start.addEventListener('click', () => {
     A.unlock();
     A.playMusic('main');
     if (isDebug) { const r = debugRun(); startRun(r, r.phase === 'bar'); }
     else if (saved) startRun(saved, true);
-    else startRun(G.newRun(randomSeed()));
+    else newRunFlow();
   });
   bindHowTo();
+  setupUpdates();
   el.howtoBtn.addEventListener('click', () => { A.unlock(); openHowTo(); });
   el.settingsHowto.addEventListener('click', () => { closeSettings(); openHowTo(); });
   el.tutorialBtn.addEventListener('click', () => {
@@ -1191,9 +1403,25 @@ function boot() {
 
   el.newRun.addEventListener('click', () => {
     A.unlock();
-    A.playMusic('main');
-    clearSave();
-    startRun(G.newRun(randomSeed()));
+    if (saved && !confirm('Start a new run? Your current run will be lost.')) return;
+    newRunFlow();
+  });
+  bindAlbum();
+  el.albumBtn.addEventListener('click', () => { A.unlock(); openAlbum(); });
+  el.bumpBtn.addEventListener('click', () => { A.unlock(); onBump(); });
+
+  // Shake the phone to bump (if switched on in Settings).
+  let lastShake = 0, prev = null;
+  window.addEventListener('devicemotion', (e) => {
+    if (!settings.shake || !run || !el.game.classList.contains('active')) return;
+    const a = e.accelerationIncludingGravity;
+    if (!a) return;
+    if (prev) {
+      const delta = Math.abs(a.x - prev.x) + Math.abs(a.y - prev.y) + Math.abs(a.z - prev.z);
+      const now = Date.now();
+      if (delta > 28 && now - lastShake > 900 && run.phase === 'nudge' && !busy) { lastShake = now; onBump(); }
+    }
+    prev = { x: a.x, y: a.y, z: a.z };
   });
 
   el.spinBtn.addEventListener('click', onSpinButton);
@@ -1236,6 +1464,7 @@ function boot() {
     if (e.code === 'Space') { e.preventDefault(); onSpinButton(); }
     const hk = { Digit1: 0, Digit2: 1, Digit3: 2 }[e.code];
     if (hk !== undefined) onHold(hk);
+    if (e.code === 'KeyB') onBump();
     const nk = { KeyQ: [0, -1], KeyA: [0, 1], KeyW: [1, -1], KeyS: [1, 1], KeyE: [2, -1], KeyD: [2, 1] }[e.code];
     if (nk) onNudge(...nk);
   });

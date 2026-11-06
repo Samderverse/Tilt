@@ -8,6 +8,8 @@ export const DEFAULTS = {
   sfx: 0.8,
   reducedFx: false,
   vibration: true,
+  speed: 1,        // scoring animation speed: 1, 2 or 4
+  shake: false,    // shake the phone to bump
 };
 
 export function loadSettings() {

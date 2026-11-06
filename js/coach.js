@@ -41,6 +41,23 @@ export function tip(id, target, html, opts = {}) {
         bubble.classList.toggle('above', !below);
         bubble.style.top = below ? r.bottom + pad + 14 + 'px' : '';
         bubble.style.bottom = below ? '' : innerHeight - r.top + pad + 14 + 'px';
+        // If the bubble would spill off the screen, flip it to the other side; failing that, clamp it.
+        const setSide = (isBelow) => {
+          bubble.classList.toggle('below', isBelow);
+          bubble.classList.toggle('above', !isBelow);
+          bubble.style.top = isBelow ? r.bottom + pad + 14 + 'px' : '';
+          bubble.style.bottom = isBelow ? '' : innerHeight - r.top + pad + 14 + 'px';
+        };
+        let br = bubble.getBoundingClientRect();
+        if (br.bottom > innerHeight - 6 || br.top < 6) {
+          setSide(!below);
+          br = bubble.getBoundingClientRect();
+          if (br.bottom > innerHeight - 6 || br.top < 6) {
+            bubble.classList.remove('below', 'above');
+            bubble.style.bottom = '';
+            bubble.style.top = Math.max(6, Math.min(innerHeight - br.height - 6, br.top)) + 'px';
+          }
+        }
         const arrowX = Math.min(Math.max(r.left + r.width / 2, 40), innerWidth - 40);
         bubble.style.setProperty('--ax', arrowX - bubble.getBoundingClientRect().left + 'px');
       } else {

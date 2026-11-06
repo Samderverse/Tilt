@@ -37,7 +37,7 @@ export function findWins(grid, ctx = {}) {
     const symId = ids.find((id) => id !== 'wild') || 'wild';
     let count = 0;
     while (count < 3 && (ids[count] === symId || ids[count] === 'wild')) count++;
-    if (count < 2) continue;
+    if (count < (ctx.minCount || 2)) continue;
 
     const sym = SYMBOLS[symId];
     const lvl = levels[symId] || 0;
@@ -54,7 +54,7 @@ export function findWins(grid, ctx = {}) {
       coins = cellEntries.reduce((s, e) => s + unit * (isGold(e) ? 2 : 1), 0);
       mult = sym.mult + lvl * LEVEL_MULT;
     } else {
-      coins = unit * 2 * (goldCount ? 2 : 1);
+      coins = Math.floor(unit * 2 * (goldCount ? 2 : 1) * (ctx.pairFactor ?? 1));
       mult = 0;
     }
 

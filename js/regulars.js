@@ -174,6 +174,39 @@ export const REGULARS = [
     line: (ctx) => ctx.win.goldCount > 0 && { xmult: Math.pow(1.5, ctx.win.goldCount) },
   },
 
+  // ---------- Drop D additions ----------
+  {
+    id: 'norman', name: 'Nervous Norman', face: '😰', rarity: 'common',
+    desc: 'Keeps the machine steady. Bumps are 10% less likely to tilt.',
+    extra: { tiltSafe: 0.1 },
+  },
+  {
+    id: 'gwen', name: 'Glass Collector Gwen', face: '🧺', rarity: 'common',
+    desc: 'Earn £1 at the end of any round you clear with a spin to spare.',
+    roundEnd: (ctx) => ctx.run.spinsLeft > 0 && { money: 1 },
+  },
+  {
+    id: 'pinball', name: 'Pinball Pete', face: '🕹️', rarity: 'uncommon',
+    desc: '+3 Multi for every bump on a winning spin.',
+    end: (ctx) => ctx.wins.length > 0 && ctx.run.bumpsThisSpin > 0 && { mult: 3 * ctx.run.bumpsThisSpin },
+  },
+  {
+    id: 'chef', name: 'Pub Chef Pat', face: '👨‍🍳', rarity: 'uncommon',
+    desc: '+8 Coins per Beer Mat level for each symbol in a winning line.',
+    line: (ctx) => ctx.win.level > 0 && { coins: 8 * ctx.win.level * ctx.win.count },
+  },
+  {
+    id: 'bob', name: 'Binman Bob', face: '🧹', rarity: 'uncommon',
+    desc: '+1 Multi on winning spins for every symbol you\'ve binned this run.',
+    end: (ctx) => ctx.wins.length > 0 && (ctx.run.stats.binned || 0) > 0 && { mult: ctx.run.stats.binned },
+    status: (s, run) => `Binned so far: ${run?.stats?.binned || 0}`,
+  },
+  {
+    id: 'dazza', name: 'DJ Dazza', face: '🎧', rarity: 'rare',
+    desc: '×1.5 Multi whenever a diagonal wins.',
+    line: (ctx) => ctx.win.line.id.startsWith('diag') && { xmult: 1.5 },
+  },
+
   // ---------- Legendary (crisp packets only) ----------
   {
     id: 'guvnor', name: 'The Guv\'nor', face: '👑', rarity: 'legendary',
@@ -199,10 +232,12 @@ export function sellValue(owned) {
 // Which definition actually acts for slot i (the Barman borrows his right-hand neighbour's).
 function actingDef(regs, i) {
   const def = REG_BY_ID[regs[i].id];
+  if (!def) return null;                    // barred for the round (Members Only)
   if (!def.copies) return { def, state: regs[i].state };
   const right = regs[i + 1];
   if (!right) return null;
   const rdef = REG_BY_ID[right.id];
+  if (!rdef) return null;
   if (rdef.copies) return null;
   regs[i].state.copy = regs[i].state.copy || {};
   const st = (regs[i].state.copy[right.id] = regs[i].state.copy[right.id] || {});
@@ -232,7 +267,7 @@ export function aliasesFor(regs) {
 }
 
 export function extrasFor(regs) {
-  const out = { spins: 0, holds: 0, nudges: 0 };
+  const out = { spins: 0, holds: 0, nudges: 0, tiltSafe: 0 };
   regs.forEach((r, i) => {
     const a = actingDef(regs, i);
     if (a?.def.extra) for (const k in a.def.extra) out[k] += a.def.extra[k];

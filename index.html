@@ -34,6 +34,7 @@
       <div class="title-menu">
         <button class="menu-btn" id="howto-btn">📖 How to Play</button>
         <button class="menu-btn" id="tutorial-btn">🎓 Tutorial run</button>
+        <button class="menu-btn" id="album-btn">📚 Album</button>
       </div>
       <p class="best" id="best-line"></p>
       <p class="sound-hint">🔊 Best with sound on</p>
@@ -133,7 +134,10 @@
         <p class="message" id="message">Press SPIN</p>
       </div>
 
-      <button id="spin-btn" class="spin-btn">SPIN</button>
+      <div class="action-row">
+        <button id="bump-btn" class="bump-btn hidden" aria-label="Bump the machine">BUMP<small id="bump-risk">10% tilt</small></button>
+        <button id="spin-btn" class="spin-btn">SPIN</button>
+      </div>
       <p class="seed" id="seed-line"></p>
     </section>
 
@@ -259,6 +263,29 @@
       </div>
     </div>
 
+    <!-- Machine picker -->
+    <div id="machines" class="overlay hidden">
+      <div class="panel machines-panel">
+        <p class="panel-kicker">New run</p>
+        <h2>Pick your machine</h2>
+        <div id="machine-list" class="machine-list"></div>
+        <button class="link-btn" id="machines-cancel">Back</button>
+      </div>
+    </div>
+
+    <!-- Album -->
+    <div id="album" class="overlay hidden">
+      <div class="panel album-panel">
+        <button class="ht-x" id="album-close" aria-label="Close">✕</button>
+        <p class="panel-kicker">Collection</p>
+        <h2>The Album</h2>
+        <div class="album-tabs"><button class="tab on" data-tab="regs">Regulars</button><button class="tab" data-tab="bosses">Landlords</button></div>
+        <p class="muted" id="album-count"></p>
+        <div id="album-grid" class="album-grid"></div>
+        <p class="album-detail" id="album-detail"></p>
+      </div>
+    </div>
+
     <!-- Settings -->
     <div id="settings" class="overlay hidden">
       <div class="panel settings-panel">
@@ -269,11 +296,17 @@
         <label class="toggle"><span>Reduced effects</span><input type="checkbox" id="opt-reduced"></label>
         <label class="toggle"><span>Vibration</span><input type="checkbox" id="opt-vibration"></label>
         <label class="toggle"><span>Barman's tips</span><input type="checkbox" id="opt-tips"></label>
+        <div class="slider speed-row"><span>Game speed</span>
+          <div class="seg" id="speed-seg"><button data-speed="1">1×</button><button data-speed="2">2×</button><button data-speed="4">4×</button></div>
+        </div>
+        <label class="toggle"><span>Shake phone to bump</span><input type="checkbox" id="opt-shake"></label>
         <button class="menu-btn wide" id="settings-howto">📖 How to Play</button>
+        <button class="menu-btn wide" id="settings-album">📚 Album</button>
         <div class="settings-actions">
           <button class="link-btn danger" id="abandon-btn">Abandon run</button>
           <button class="big-btn" id="settings-close">Done</button>
         </div>
+        <p class="version-line" id="version-line"></p>
         <details class="credits">
           <summary>Credits</summary>
           <ul id="credits-list"></ul>

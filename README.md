@@ -11,8 +11,9 @@ A chaotic pub fruit machine roguelike by Samderverse. Spin, hold, nudge and surv
   - Every spin starts at ×3 Multi. Only the best line's Multi counts (extra lines add Coins), then Regulars add their bonuses
 - **Hold** (3 per round): keep reels still on the next spin. A reel can't be held twice running.
 - **Nudge** (2 per round): after a spin, move a reel up or down one symbol, then **Collect**.
+- **Bump**: after a spin, jolt every reel up or down at random. Free, but each bump raises the round's **tilt** risk (10%, 30%, 50%...). Tilt and that spin scores nothing. Can also shake the phone (Settings).
 - Earn £ each round: round reward + £1 per spare spin (max £3) + interest (£1 per £5 held, max £3).
-- Beat Pint 8's Landlord to win the run.
+- Beat Pint 8's Landlord to win the run, then keep everything and carry on in **Endless** mode (targets grow ×1.75 per Pint).
 
 ## Learning to play
 - **How to Play**: a 7-page illustrated guide, on the title screen and in Settings.
@@ -61,7 +62,23 @@ Open the GitHub Pages link, then:
 **Seeing the latest version:** GitHub Pages can take a minute or two to update after a push. If the old version still shows, close the app fully and reopen it.
 
 ## Landlords
-The Bouncer, Health Inspector, Last Orders, Power Cut, The Taxman, Drunk Uncle, The Quiz Master, Sticky Floors.
+16 in total. Each run gets 4 from the early pool for Pints 1–4 and 4 from the late pool for Pints 5–8; endless brings in the rest.
+- Early: The Bouncer, Health Inspector, Last Orders, The Quiz Master, Sticky Floors, Bolted Down, Running a Tab, Jammed Reel
+- Late: Power Cut, The Taxman, Drunk Uncle, Half Measures, Darts Night, Smoke Machine, Members Only, Watered Down
+
+## Starting machines
+Unlocked by your best run: The Local (always), Seaside Arcade (clear Pint 2), Student Union (Pint 4),
+Working Men's Club (Pint 6), High Roller (beat the pub).
+
+## Extras
+- **Album**: every Regular you've seen or recruited, and every Landlord you've faced or beaten.
+- **Run summary**: your line-up and stats at the end of a run, with a Share button.
+- **Game speed**: 1× / 2× / 4× in Settings.
+- **Updates & offline**: players get a "new version" banner, and the game works offline once loaded.
+
+## Publishing an update
+Change the version number in **both** `js/version.js` and `version.json` (e.g. 1.5.0 → 1.5.1) every time you upload.
+That's what makes the "new version available" banner appear for everyone.
 
 ## Testing shortcuts
 - `?seed=ABC123` replays an exact run (seed shown under the SPIN button)
@@ -71,6 +88,8 @@ The Bouncer, Health Inspector, Last Orders, Power Cut, The Taxman, Drunk Uncle, 
 - `?regs=jen,barman,darts` starts with those Regulars (ids in `js/regulars.js`)
 - `?bar=1` opens the Bar straight away
 - `?specials=lockin,piggy` starts with those Landlord's Specials
+- `?machine=casino` starts on that machine; `?round=25` jumps into endless
+- Desktop key B bumps
 - `?taps=1` shows a dot wherever your phone registers a tap, and outlines the button it hit
 - Desktop keys: Space spins/collects, 1–3 hold, Q/A W/S E/D nudge reels up/down
 
@@ -93,6 +112,9 @@ The Bouncer, Health Inspector, Last Orders, Power Cut, The Taxman, Drunk Uncle, 
 - `js/audio.js`: music/ambience/sfx mixer
 - `js/fx.js`: particles, flashes, shakes, glitches
 - `js/settings.js`: settings and credits
+- `js/machines.js`: starting machines
+- `js/album.js`: the Album
+- `js/version.js`, `version.json`, `sw.js`: update notice and offline play
 - `icons/`, `manifest.json`: app icon and home-screen install
 
 ## Roadmap
@@ -100,3 +122,5 @@ The Bouncer, Health Inspector, Last Orders, Power Cut, The Taxman, Drunk Uncle, 
 - Drop B: The Bar (shop), Regulars, Beer Mats, Scratchcards, crisp packets ✅
 - Rebalance: 5 lines, ×3 base Multi, best-line Multi, 6 spins ✅
 - Drop C: art & identity pass, How to Play, tutorial ✅
+- Economy rework, Landlord's Specials ✅
+- Drop D: endless, bump & tilt, 8 Landlords, 6 Regulars, machines, album, speed, updates ✅

@@ -2,10 +2,17 @@
 import { makeRng } from './rng.js';
 import { SYMBOLS, BASE_SYMBOLS, baseId, isGold } from './symbols.js';
 import { REGULARS, REG_BY_ID, RARITY, maxRegulars, priceOf, sellValue } from './regulars.js';
+import { machineOf } from './machines.js';
+
+// Machine discounts (Student Union, Working Men's Club).
+export function cost(run, base, isRegular = false) {
+  const m = machineOf(run);
+  return Math.max(1, base - (m.discount || 0) - (isRegular ? m.regDiscount || 0 : 0));
+}
 
 // Prices scale with power. Beer Mats get £1 dearer for each level that symbol already has.
 export const MAT_BASE_PRICE = 3;
-export const matPrice = (run, id) => MAT_BASE_PRICE + (run.levels[id] || 0);
+export const matPrice = (run, id) => cost(run, MAT_BASE_PRICE + (run.levels[id] || 0));
 export const RESTOCK_START = 2;
 export const MIN_STRIP = 6;
 export const MAX_STRIP = 20;
@@ -72,11 +79,11 @@ function stockItems(run, rng) {
   const items = [];
   const a = rollRegular(rng, run);
   const b = rollRegular(rng, run, [a]);
-  for (const id of [a, b]) if (id) items.push({ type: 'regular', id, price: priceOf(id) });
+  for (const id of [a, b]) if (id) items.push({ type: 'regular', id, price: cost(run, priceOf(id), true) });
   const extras = hasSpecial(run, 'bigbar') ? 2 : 1;
   for (let k = 0; k < extras; k++) {
     if (rng.next() < 0.6) { const m = rng.pick(BASE_SYMBOLS); items.push({ type: 'mat', id: m, price: matPrice(run, m) }); }
-    else { const s = rng.pick(SCRATCHCARDS); items.push({ type: 'scratch', id: s.id, price: s.price }); }
+    else { const s = rng.pick(SCRATCHCARDS); items.push({ type: 'scratch', id: s.id, price: cost(run, s.price) }); }
   }
   return items;
 }
@@ -89,8 +96,8 @@ export function openBar(run) {
     rerolls: 0,
     rerollCost: RESTOCK_START,
     items: stockItems(run, rng),
-    packets: rng.shuffle(PACKETS.map((p) => p.id)).slice(0, 2).map((id) => ({ type: 'packet', id, price: PACKET_BY_ID[id].price })),
-    special: sp ? { type: 'special', id: sp, price: SPECIAL_BY_ID[sp].price } : null,
+    packets: rng.shuffle(PACKETS.map((p) => p.id)).slice(0, 2).map((id) => ({ type: 'packet', id, price: cost(run, PACKET_BY_ID[id].price) })),
+    special: sp ? { type: 'special', id: sp, price: cost(run, SPECIAL_BY_ID[sp].price) } : null,
     pending: null,     // a packet being opened, or a scratchcard waiting for a target
   };
   return run.bar;
@@ -193,7 +200,7 @@ export function applyScratch(run, id, r, i) {
   const strip = run.reels[r];
   if (id === 'gold') strip[i] = baseId(strip[i]) + ':gold';
   if (id === 'copy') strip.splice(i + 1, 0, strip[i]);
-  if (id === 'bin') strip.splice(i, 1);
+  if (id === 'bin') { strip.splice(i, 1); run.stats.binned = (run.stats.binned || 0) + 1; }
   if (id === 'wild') strip[i] = 'wild';
   run.stops[r] = run.stops[r] % strip.length;
   if (run.bar?.pending?.kind === 'scratch') run.bar.pending = null;

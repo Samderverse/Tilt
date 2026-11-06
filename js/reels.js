@@ -4,9 +4,9 @@ export const REEL_COUNT = 3;
 export const ROWS = 3;
 
 // Build three shuffled reel strips (arrays of symbol ids).
-export function makeReels(rng) {
+export function makeReels(rng, strip = STARTING_STRIP) {
   const base = [];
-  for (const [id, count] of Object.entries(STARTING_STRIP)) {
+  for (const [id, count] of Object.entries(strip)) {
     for (let i = 0; i < count; i++) base.push(id);
   }
   return Array.from({ length: REEL_COUNT }, () => rng.shuffle(base));
