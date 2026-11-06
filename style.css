@@ -1469,3 +1469,22 @@ body[data-machine="casino"]:not(.boss) #pint-label { font-family: 'Limelight', G
 body.reduced-fx .scenery .gull, body.reduced-fx .scenery .spark { display: none; }
 body.reduced-fx .scenery .wave { animation: none; }
 .scenery .poster { opacity: .2; }
+
+/* ---------- Sound test ---------- */
+.soundtest-panel { position: relative; max-width: 440px; text-align: left; }
+.soundtest-panel h2, .soundtest-panel .panel-kicker { text-align: center; }
+.soundtest-panel > .muted { font-size: 13px; line-height: 1.4; margin: 0 0 10px; }
+.st-list { display: flex; flex-direction: column; gap: 6px; }
+.st-row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 12px; background: rgba(0,0,0,.3); border: 2px solid transparent; }
+.st-row.changed { border-color: var(--gold-dim); }
+.st-play { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 0; cursor: pointer; font-size: 16px;
+  background: linear-gradient(var(--gold), var(--gold-dim)); color: #2a1200; box-shadow: 0 3px 0 rgba(0,0,0,.45); }
+.st-play:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45); }
+.st-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.st-label { font-weight: 700; font-size: 13.5px; }
+.st-main select { width: 100%; min-height: 36px; border-radius: 8px; border: 2px solid var(--wood); background: #1a0710; color: var(--cream); font: inherit; font-size: 13px; padding: 4px 6px; }
+.st-actions { display: flex; gap: 8px; justify-content: center; margin: 12px 0 6px; flex-wrap: wrap; }
+.st-all { margin-top: 8px; font-size: 13px; }
+.st-all summary { cursor: pointer; opacity: .8; padding: 8px 0; }
+.st-clips { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 6px; }
+.st-clip { border: 2px solid var(--wood); background-color: rgba(0,0,0,.3); border-radius: 10px; padding: 8px 10px; min-height: 40px; font-size: 12.5px; cursor: pointer; }

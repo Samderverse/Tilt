@@ -30,4 +30,5 @@ export const CREDITS = [
   { what: 'Main track', who: 'Add artist / source here' },
   { what: 'Boss track', who: 'Add artist / source here' },
   { what: 'Pub ambience', who: 'Add artist / source here' },
+  { what: 'Slot machine sound effects', who: 'sonidosKMD' },
 ];

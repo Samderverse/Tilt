@@ -13,6 +13,7 @@ import { openHowTo, bindHowTo } from './howto.js';
 import { tip, tipsOn, setTips, resetTips } from './coach.js';
 import { MACHINES, MACHINE_BY_ID, machineOf } from './machines.js';
 import { setScenery, miniCabinet } from './scenery.js';
+import { openSoundTest, bindSoundTest } from './soundtest.js';
 import { VERSION } from './version.js';
 import { openAlbum, bindAlbum, seeRegular, ownRegular, faceBoss, beatBoss } from './album.js';
 
@@ -449,13 +450,13 @@ async function onBump() {
   if (!res) { A.sfx.denied(); return; }
   busy = true;
   renderControls();
-  A.sfx.swap();
+  A.sfx.bump();
   A.buzz([25, 30, 25]);
   if (res.tilted) {
     FX.shake(el.game, 'big');
     FX.glitch(el.machine, 800);
     FX.flash('#ff2a2a', 500);
-    A.sfx.wrong();
+    A.sfx.tilt();
     say(`TILT! The machine locks up. This spin scores nothing.`);
     await FX.stamp('TILT!', '#ff4b3a', 1300 / speed());
     busy = false;
@@ -508,6 +509,7 @@ async function doSpin() {
   A.sfx.spin();
   if (s.paid) { toast(`${info().boss.name}: £${s.paid} on the tab`); bump(el.money); A.sfx.cash(); }
   await animateSpin(s);
+  A.sfx.spinEnd();
   if (s.swap) await animateSwap(s.swap);
   G.landed(run, s.swap);
   renderReelsStatic();
@@ -1307,6 +1309,7 @@ function bindSettings() {
     saveSettings(settings);
   });
   el.settingsAlbum.addEventListener('click', () => { closeSettings(); openAlbum(); });
+  $('settings-sounds').addEventListener('click', () => { closeSettings(); openSoundTest(); });
   el.settingsBtn.addEventListener('click', () => { A.unlock(); openSettings(); });
   el.barSettingsBtn.addEventListener('click', () => { A.unlock(); openSettings(); });
   el.settingsClose.addEventListener('click', closeSettings);
@@ -1414,6 +1417,8 @@ function boot() {
     newRunFlow();
   });
   bindAlbum();
+  bindSoundTest();
+  if (params.has('sounds')) openSoundTest();
   el.albumBtn.addEventListener('click', () => { A.unlock(); openAlbum(); });
   el.bumpBtn.addEventListener('click', () => { A.unlock(); onBump(); });
 

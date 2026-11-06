@@ -2,6 +2,8 @@
 // Web Audio gives gapless loops, crossfades, ducking and a low-pass "muffle".
 // iOS only allows audio after a tap, so call unlock() from a tap handler.
 
+import { CLIPS, ROLE_BY_ID, loadPicks } from './sfxmap.js';
+
 const TRACKS = {
   main: 'audio/main.mp3',
   boss: 'audio/boss.mp3',
@@ -17,11 +19,27 @@ let ambSrc = null;
 let wantedTrack = null;
 let noiseBuf = null;
 let vols = { music: 0.6, ambience: 0.3, sfx: 0.8 };
+const clipRaw = {};    // fetched sound-effect clips
+const clipBuf = {};    // decoded clips
+let picks = loadPicks();
+let spinSrc = null;
 
 // Start downloading straight away so music is ready by the first tap.
 export function preload() {
   for (const [name, url] of Object.entries(TRACKS)) {
     raw[name] = fetch(url).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null);
+  }
+  for (const name of CLIPS) {
+    clipRaw[name] = fetch(`audio/sfx/${name}.mp3`).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null);
+  }
+}
+
+async function decodeClips() {
+  for (const name of CLIPS) {
+    try {
+      const ab = await clipRaw[name];
+      if (ab) clipBuf[name] = await decode(ab);
+    } catch (e) { console.warn('SFX decode failed', name); }
   }
 }
 
@@ -55,6 +73,7 @@ export function unlock() {
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
 
     applyVolumes();
+    decodeClips();
     decodeAll();
 
     // Pause everything when the app goes to the background.
@@ -211,7 +230,7 @@ function noise(dur = 0.2, vol = 0.1, freq = 1200, delay = 0, type = 'bandpass') 
   src.stop(t + dur + 0.02);
 }
 
-export const sfx = {
+const synth = {
   spin()      { noise(0.35, 0.05, 600, 0, 'lowpass'); tone(160, 0.15, 'sawtooth', 0.03, 0, 90); },
   tick()      { tone(1100, 0.02, 'square', 0.015); },
   stop(i)     { tone(140 + i * 40, 0.09, 'triangle', 0.18); noise(0.05, 0.06, 2500); },
@@ -239,3 +258,92 @@ export function setVibration(on) { vibrate = on; }
 export function buzz(pattern) {
   if (vibrate && navigator.vibrate) navigator.vibrate(pattern);
 }
+
+// ---------- Sampled sound effects, with the synth as a fallback ----------
+function playClip(name, { rate = 1, gain = 1, delay = 0 } = {}) {
+  const buf = clipBuf[name];
+  if (!ctx || !buf) return null;
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.playbackRate.value = rate;
+  const g = ctx.createGain();
+  g.gain.value = gain;
+  src.connect(g).connect(sfxBus);
+  src.start(ctx.currentTime + delay);
+  src._gain = g;
+  return src;
+}
+
+const clipFor = (roleId) => picks[roleId] ?? ROLE_BY_ID[roleId]?.def ?? 'synth';
+
+// Play whatever is picked for a moment; fall back to the synth if it's 'synth' or not loaded yet.
+function role(roleId, fallback, opts = {}) {
+  const clip = clipFor(roleId);
+  const gain = (ROLE_BY_ID[roleId]?.gain ?? 1) * (opts.gain ?? 1);
+  if (clip !== 'synth') {
+    const src = playClip(clip, { ...opts, gain });
+    if (src) return src;
+  }
+  if (fallback) fallback();
+  return null;
+}
+
+export function reloadPicks() { picks = loadPicks(); }
+
+// What each moment sounds like with the synth, for the Sound test page.
+const SYNTH_FOR = {
+  spin: () => synth.spin(), reelStop: () => synth.stop(0), lineWin: () => [0, 1, 2].forEach((s) => setTimeout(() => synth.win(s), s * 260)),
+  coin: () => synth.coin(), multi: () => synth.mult(), hold: () => synth.hold(), nudge: () => synth.nudge(), bump: () => synth.swap(),
+  tilt: () => synth.wrong(), bigWin: () => synth.fire(), roundClear: () => synth.clear(), bossBeaten: () => synth.shatter(),
+  cash: () => synth.cash(), blank: () => synth.blank(), lose: () => synth.lose(), slam: () => synth.slam(), lever: () => {},
+};
+
+// Sound test: hear a moment with a given clip (or the synth).
+export function preview(roleId, clip) {
+  unlock();
+  const gain = ROLE_BY_ID[roleId]?.gain ?? 1;
+  if (clip === 'synth') { SYNTH_FOR[roleId]?.(); return; }
+  if (roleId === 'lineWin') { [0, 1, 2].forEach((s) => playClip(clip, { gain, rate: Math.pow(1.122, s), delay: s * 0.26 })); return; }
+  if (roleId === 'reelStop') { [0, 1, 2].forEach((s) => playClip(clip, { gain, rate: [1, 0.96, 0.92][s], delay: s * 0.25 })); return; }
+  playClip(clip, { gain });
+}
+
+export function clipsReady() { return Object.keys(clipBuf).length; }
+
+export const sfx = {
+  spin() {
+    role('lever', null);
+    if (spinSrc) { try { spinSrc.stop(); } catch {} }
+    spinSrc = role('spin', synth.spin);
+  },
+  // Fade the spinning sound out once the last reel has landed.
+  spinEnd() {
+    if (!spinSrc || !ctx) return;
+    const s = spinSrc; spinSrc = null;
+    const g = s._gain.gain;
+    g.setValueAtTime(g.value, ctx.currentTime);
+    g.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
+    try { s.stop(ctx.currentTime + 0.15); } catch {}
+  },
+  tick: () => synth.tick(),
+  stop: (i) => role('reelStop', () => synth.stop(i), { rate: [1, 0.96, 0.92][i] || 1 }),
+  hold: () => role('hold', synth.hold),
+  unhold: () => role('hold', synth.unhold, { rate: 0.9 }),
+  nudge: () => role('nudge', synth.nudge),
+  denied: () => synth.denied(),
+  win: (step) => role('lineWin', () => synth.win(step), { rate: Math.pow(1.122, Math.min(step, 6)) }),
+  coin: () => role('coin', synth.coin),
+  mult: () => role('multi', synth.mult),
+  blank: () => role('blank', synth.blank),
+  blocked: () => synth.blocked(),
+  fire: () => role('bigWin', synth.fire),
+  clear: () => role('roundClear', synth.clear),
+  lose: () => role('lose', synth.lose),
+  slam: () => role('slam', synth.slam),
+  shatter() { synth.shatter(); role('bossBeaten', null); },
+  swap: () => synth.swap(),
+  bump: () => role('bump', synth.swap),
+  tilt: () => role('tilt', synth.wrong),
+  wrong: () => synth.wrong(),
+  cash: () => role('cash', synth.cash),
+};

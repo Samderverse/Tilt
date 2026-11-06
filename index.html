@@ -289,6 +289,22 @@
       </div>
     </div>
 
+    <!-- Sound test -->
+    <div id="soundtest" class="overlay hidden">
+      <div class="panel soundtest-panel">
+        <button class="ht-x" id="st-close" aria-label="Close">✕</button>
+        <p class="panel-kicker">Sound test</p>
+        <h2>Pick your sounds</h2>
+        <p class="muted">Tap ▶ to hear each moment. Change the dropdown to try another clip (★ is my suggestion). Your picks are used in the game straight away.</p>
+        <div id="st-list" class="st-list"></div>
+        <div class="st-actions">
+          <button class="menu-btn" id="st-reset">↺ Reset to ★</button>
+          <button class="menu-btn" id="st-copy">📋 Copy my picks</button>
+        </div>
+        <details class="st-all"><summary>Hear every clip</summary><div id="st-clips" class="st-clips"></div></details>
+      </div>
+    </div>
+
     <!-- Settings -->
     <div id="settings" class="overlay hidden">
       <div class="panel settings-panel">
@@ -305,6 +321,7 @@
         <label class="toggle"><span>Shake phone to bump</span><input type="checkbox" id="opt-shake"></label>
         <button class="menu-btn wide" id="settings-howto">📖 How to Play</button>
         <button class="menu-btn wide" id="settings-album">📚 Album</button>
+        <button class="menu-btn wide" id="settings-sounds">🔊 Sound test</button>
         <div class="settings-actions">
           <button class="link-btn danger" id="abandon-btn">Abandon run</button>
           <button class="big-btn" id="settings-close">Done</button>

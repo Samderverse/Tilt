@@ -101,6 +101,12 @@ That's what makes the "new version available" banner appear for everyone.
 - `?taps=1` shows a dot wherever your phone registers a tap, and outlines the button it hit
 - Desktop keys: Space spins/collects, 1–3 hold, Q/A W/S E/D nudge reels up/down
 
+## Sound effects
+- `audio/sfx/`: 23 clips cut from the slot machine sound effects file (by sonidosKMD), trimmed, faded and levelled.
+- `js/sfxmap.js`: which clip plays for each game moment (★ = suggested default). Set a moment to `'synth'` to use the built-in beep.
+- **Sound test** (Settings → 🔊 Sound test, or `?sounds=1`): hear each moment, swap clips from a dropdown, then "Copy my picks"
+  to send the choices back. Picks are saved in that browser and used in-game straight away.
+
 ## Audio
 - `audio/main.mp3`, `audio/boss.mp3`: levelled to the same loudness, trimmed for looping
 - `audio/ambience.mp3`: crossfaded into a seamless 18s loop, set well under the music
@@ -122,6 +128,7 @@ That's what makes the "new version available" banner appear for everyone.
 - `js/settings.js`: settings and credits
 - `js/machines.js`: starting machines
 - `js/scenery.js`: machine scenery, cabinet decorations and picker previews
+- `js/sfxmap.js`, `js/soundtest.js`: sound effect mapping and the Sound test page
 - `js/album.js`: the Album
 - `js/version.js`, `version.json`, `sw.js`: update notice and offline play
 - `icons/`, `manifest.json`: app icon and home-screen install
