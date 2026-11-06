@@ -2,7 +2,7 @@
 // Web Audio gives gapless loops, crossfades, ducking and a low-pass "muffle".
 // iOS only allows audio after a tap, so call unlock() from a tap handler.
 
-import { CLIPS, ROLE_BY_ID, loadPicks } from './sfxmap.js';
+import { CLIPS, ROLE_BY_ID } from './sfxmap.js';
 
 const TRACKS = {
   main: 'audio/main.mp3',
@@ -21,7 +21,6 @@ let noiseBuf = null;
 let vols = { music: 0.6, ambience: 0.3, sfx: 0.8 };
 const clipRaw = {};    // fetched sound-effect clips
 const clipBuf = {};    // decoded clips
-let picks = loadPicks();
 let spinSrc = null;
 
 // Start downloading straight away so music is ready by the first tap.
@@ -274,41 +273,21 @@ function playClip(name, { rate = 1, gain = 1, delay = 0 } = {}) {
   return src;
 }
 
-const clipFor = (roleId) => picks[roleId] ?? ROLE_BY_ID[roleId]?.def ?? 'synth';
+const clipFor = (roleId) => ROLE_BY_ID[roleId]?.def ?? 'synth';
 
 // Play whatever is picked for a moment; fall back to the synth if it's 'synth' or not loaded yet.
 function role(roleId, fallback, opts = {}) {
   const clip = clipFor(roleId);
-  const gain = (ROLE_BY_ID[roleId]?.gain ?? 1) * (opts.gain ?? 1);
+  const def = ROLE_BY_ID[roleId] || {};
+  const gain = (def.gain ?? 1) * (opts.gain ?? 1);
+  const rate = (def.rate ?? 1) * (opts.rate ?? 1);
   if (clip !== 'synth') {
-    const src = playClip(clip, { ...opts, gain });
+    const src = playClip(clip, { ...opts, gain, rate });
     if (src) return src;
   }
   if (fallback) fallback();
   return null;
 }
-
-export function reloadPicks() { picks = loadPicks(); }
-
-// What each moment sounds like with the synth, for the Sound test page.
-const SYNTH_FOR = {
-  spin: () => synth.spin(), reelStop: () => synth.stop(0), lineWin: () => [0, 1, 2].forEach((s) => setTimeout(() => synth.win(s), s * 260)),
-  coin: () => synth.coin(), multi: () => synth.mult(), hold: () => synth.hold(), nudge: () => synth.nudge(), bump: () => synth.swap(),
-  tilt: () => synth.wrong(), bigWin: () => synth.fire(), roundClear: () => synth.clear(), bossBeaten: () => synth.shatter(),
-  cash: () => synth.cash(), blank: () => synth.blank(), lose: () => synth.lose(), slam: () => synth.slam(), lever: () => {},
-};
-
-// Sound test: hear a moment with a given clip (or the synth).
-export function preview(roleId, clip) {
-  unlock();
-  const gain = ROLE_BY_ID[roleId]?.gain ?? 1;
-  if (clip === 'synth') { SYNTH_FOR[roleId]?.(); return; }
-  if (roleId === 'lineWin') { [0, 1, 2].forEach((s) => playClip(clip, { gain, rate: Math.pow(1.122, s), delay: s * 0.26 })); return; }
-  if (roleId === 'reelStop') { [0, 1, 2].forEach((s) => playClip(clip, { gain, rate: [1, 0.96, 0.92][s], delay: s * 0.25 })); return; }
-  playClip(clip, { gain });
-}
-
-export function clipsReady() { return Object.keys(clipBuf).length; }
 
 export const sfx = {
   spin() {
@@ -340,7 +319,7 @@ export const sfx = {
   clear: () => role('roundClear', synth.clear),
   lose: () => role('lose', synth.lose),
   slam: () => role('slam', synth.slam),
-  shatter() { synth.shatter(); role('bossBeaten', null); },
+  shatter() { role('shatter', synth.shatter); role('bossBeaten', null, { delay: 0.55 }); },
   swap: () => synth.swap(),
   bump: () => role('bump', synth.swap),
   tilt: () => role('tilt', synth.wrong),

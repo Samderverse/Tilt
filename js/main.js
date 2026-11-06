@@ -13,7 +13,6 @@ import { openHowTo, bindHowTo } from './howto.js';
 import { tip, tipsOn, setTips, resetTips } from './coach.js';
 import { MACHINES, MACHINE_BY_ID, machineOf } from './machines.js';
 import { setScenery, miniCabinet } from './scenery.js';
-import { openSoundTest, bindSoundTest } from './soundtest.js';
 import { VERSION } from './version.js';
 import { openAlbum, bindAlbum, seeRegular, ownRegular, faceBoss, beatBoss } from './album.js';
 
@@ -1309,7 +1308,6 @@ function bindSettings() {
     saveSettings(settings);
   });
   el.settingsAlbum.addEventListener('click', () => { closeSettings(); openAlbum(); });
-  $('settings-sounds').addEventListener('click', () => { closeSettings(); openSoundTest(); });
   el.settingsBtn.addEventListener('click', () => { A.unlock(); openSettings(); });
   el.barSettingsBtn.addEventListener('click', () => { A.unlock(); openSettings(); });
   el.settingsClose.addEventListener('click', closeSettings);
@@ -1417,8 +1415,7 @@ function boot() {
     newRunFlow();
   });
   bindAlbum();
-  bindSoundTest();
-  if (params.has('sounds')) openSoundTest();
+  try { localStorage.removeItem('tilt.sfxmap.v1'); } catch {}   // old Sound test picks, no longer used
   el.albumBtn.addEventListener('click', () => { A.unlock(); openAlbum(); });
   el.bumpBtn.addEventListener('click', () => { A.unlock(); onBump(); });
 

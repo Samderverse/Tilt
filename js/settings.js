@@ -31,4 +31,9 @@ export const CREDITS = [
   { what: 'Boss track', who: 'Add artist / source here' },
   { what: 'Pub ambience', who: 'Add artist / source here' },
   { what: 'Slot machine sound effects', who: 'sonidosKMD' },
+  { what: 'Glass smash', who: 'Epic Sound Effects' },
+  { what: 'Game over jingle', who: 'Webiverse Vids' },
+  { what: 'Blank spin', who: 'skypescoop' },
+  { what: 'Tilt glitch', who: 'Edwardo Ching' },
+  { what: 'Landlord music', who: '"Circuit-Runes Collapse" by LoFi Lich' },
 ];
