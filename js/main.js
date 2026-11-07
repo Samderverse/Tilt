@@ -67,7 +67,10 @@ function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(run)); } c
 function load() {
   try {
     const r = JSON.parse(localStorage.getItem(SAVE_KEY));
-    return r && r.v === 3 ? r : null;
+    if (!r || r.v !== 3) return null;
+    // A run that was lost or won but never closed off properly (e.g. the app was shut mid-animation)
+    // is still returned, so startRun can show its proper ending.
+    return r;
   } catch { return null; }
 }
 function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch {} }
@@ -317,6 +320,15 @@ function setAppHeight() {
   document.documentElement.style.setProperty('--app-h', h + 'px');
 }
 
+// Title buttons: "Continue" only when there's a run worth continuing.
+function refreshTitle() {
+  const saved = load();
+  const canContinue = !!saved && !location.search;
+  el.start.textContent = canContinue ? 'Continue' : 'Tap to Play';
+  el.newRun.classList.toggle('hidden', !canContinue);
+  el.best.textContent = bestText();
+}
+
 function showScreen(name) {
   for (const s of [el.title, el.game, el.barScreen]) s.classList.remove('active');
   ({ title: el.title, game: el.game, bar: el.barScreen })[name].classList.add('active');
@@ -329,6 +341,7 @@ function showScreen(name) {
   if (mq && m) mq.textContent = m.short || m.name;
   if (run) Drunk.setPint(info().pint);
   Drunk.setScreen(name);
+  if (name === 'title') refreshTitle();
 }
 
 // ---------- Spin animation ----------
@@ -1212,7 +1225,11 @@ async function startRun(r, resumed = false) {
   if (run.phase === 'bar') return enterBar();
   showScreen('game');
   if (run.phase === 'spinning') run.phase = run.nudgesLeft > 0 || G.canBump(run, true) ? 'nudge' : 'scoring';
+  // Safety net: out of spins but never resolved (app closed at the wrong moment) -> settle it now.
+  if (run.phase === 'ready' && run.spinsLeft <= 0) run.phase = run.score >= info().target ? 'cleared' : 'failed';
   renderAll();
+  if (run.phase === 'failed') { busy = true; renderControls(); return gameOver(); }
+  if (run.phase === 'won') { busy = true; renderControls(); return victory(); }
   if (run.phase === 'cleared') { busy = true; renderControls(); return roundCleared(); }
   if (run.phase === 'scoring') return doCollect();
   if (run.phase === 'nudge') { showPreview(); return; }
@@ -1253,7 +1270,7 @@ function chooseMachine() {
 async function newRunFlow(fromEnd = false) {
   const id = await chooseMachine();
   if (!id) {
-    if (fromEnd) { showScreen('title'); el.start.textContent = 'Tap to Play'; el.newRun.classList.add('hidden'); el.best.textContent = bestText(); }
+    if (fromEnd) showScreen('title');
     return;
   }
   A.playMusic('main');
@@ -1344,9 +1361,6 @@ function bindSettings() {
     A.setBossMode(false);
     A.setMuffled(false);
     showScreen('title');
-    el.start.textContent = 'Tap to Play';
-    el.newRun.classList.add('hidden');
-    el.best.textContent = bestText();
   });
   el.credits.innerHTML = CREDITS.map((c) => `<li><b>${c.what}:</b> ${c.who}</li>`).join('') +
     '<li><b>Game:</b> Tilt by Samderverse</li>';
@@ -1387,11 +1401,7 @@ function boot() {
 
   const params = new URLSearchParams(location.search);
   const forcedSeed = params.get('seed');
-  const saved = load();
-  if (saved && !location.search) {
-    el.start.textContent = 'Continue';
-    el.newRun.classList.remove('hidden');
-  }
+  refreshTitle();
 
   // Test shortcuts: ?round=3, ?boss=uncle, ?money=50, ?regs=penny,jen, ?bar=1 (open the Bar first)
   const debugRun = () => {
@@ -1417,6 +1427,7 @@ function boot() {
   el.start.addEventListener('click', () => {
     A.unlock();
     A.playMusic('main');
+    const saved = load();      // read fresh: the run may have ended or been abandoned since the page loaded
     if (isDebug) { const r = debugRun(); startRun(r, r.phase === 'bar'); }
     else if (saved) startRun(saved, true);
     else newRunFlow();
@@ -1427,7 +1438,7 @@ function boot() {
   el.settingsHowto.addEventListener('click', () => { closeSettings(); openHowTo(); });
   el.tutorialBtn.addEventListener('click', () => {
     A.unlock();
-    if (saved && !confirm('Start a fresh tutorial run? Your current run will be lost.')) return;
+    if (load() && !confirm('Start a fresh tutorial run? Your current run will be lost.')) return;
     resetTips();
     clearSave();
     A.playMusic('main');
@@ -1436,7 +1447,7 @@ function boot() {
 
   el.newRun.addEventListener('click', () => {
     A.unlock();
-    if (saved && !confirm('Start a new run? Your current run will be lost.')) return;
+    if (load() && !confirm('Start a new run? Your current run will be lost.')) return;
     newRunFlow();
   });
   bindAlbum();
