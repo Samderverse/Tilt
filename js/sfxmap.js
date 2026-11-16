@@ -4,6 +4,7 @@
 export const CLIPS = [
   'reel-spin-a', 'reel-stop-a', 'chime-a', 'button-tick', 'button-click', 'ding', 'coin-ding',
   'thump-a', 'coin-cascade', 'win-bell-short', 'win-bell', 'glass-smash', 'game-over', 'blank-fart', 'tilt-glitch',
+  'crisps-open', 'crunch', 'scratch', 'hiccup-a', 'hiccup-b', 'buzzer', 'cheers', 'cha-ching', 'jackpot', 'beer-pour', 'last-orders',
 ];
 
 // gain: relative loudness of that moment; rate: playback speed (lower = deeper).
@@ -26,5 +27,16 @@ export const ROLES = [
   { id: 'blank',      def: 'blank-fart',     gain: 0.7 },   // a spin that wins nothing
   { id: 'lose',       def: 'game-over',      gain: 0.6 },   // game over
   { id: 'lever',      def: 'synth',          gain: 0.6 },   // (unused for now)
+  { id: 'crispOpen',  def: 'crisps-open',    gain: 0.8 },   // tearing a crisp packet open
+  { id: 'crunch',     def: 'crunch',         gain: 0.7 },   // the goodies spill out
+  { id: 'scratch',    def: 'scratch',        gain: 0.7 },   // using a Scratchcard
+  { id: 'hiccupA',    def: 'hiccup-a',       gain: 0.55 },  // drunk hiccup (Hammered stage)
+  { id: 'hiccupB',    def: 'hiccup-b',       gain: 0.55 },
+  { id: 'denied',     def: 'buzzer',         gain: 0.45 },  // can't do that / can't afford it
+  { id: 'cheers',     def: 'cheers',         gain: 0.7 },   // a Regular joins your machine
+  { id: 'sell',       def: 'cha-ching',      gain: 0.65 },  // selling a Regular
+  { id: 'jackpot',    def: 'jackpot',        gain: 0.7 },   // beating the pub (Pint 8's Landlord)
+  { id: 'pour',       def: 'beer-pour',      gain: 0.6 },   // walking into the Bar
+  { id: 'bell',       def: 'last-orders',    gain: 0.5 },   // Restock (the bar bell)
 ];
 export const ROLE_BY_ID = Object.fromEntries(ROLES.map((r) => [r.id, r]));

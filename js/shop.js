@@ -169,6 +169,20 @@ export function pickFromPacket(run, choiceIndex) {
   return useScratch(run, c.id);
 }
 
+// Slots full? Sell the Regular in `slot` and put the packet's pick in their place.
+export function swapFromPacket(run, choiceIndex, slot) {
+  const p = run.bar.pending;
+  if (!p || p.kind !== 'packet') return { ok: false };
+  const c = p.choices[choiceIndex];
+  const old = run.regulars[slot];
+  if (!c || c.type !== 'regular' || !old) return { ok: false };
+  const v = sellValue(old);
+  run.money += v;
+  run.regulars[slot] = { id: c.id, state: {} };
+  run.bar.pending = null;
+  return { ok: true, sold: old.id, value: v };
+}
+
 export function addRegular(run, id) {
   run.regulars.push({ id, state: {} });
 }

@@ -6,8 +6,8 @@ import { regularCard } from './art.js';
 const KEY = 'tilt.album.v1';
 let data = load();
 function load() {
-  try { return { regs: {}, bosses: {}, ...(JSON.parse(localStorage.getItem(KEY)) || {}) }; }
-  catch { return { regs: {}, bosses: {} }; }
+  try { return { regs: {}, bosses: {}, wins: {}, losses: {}, ...(JSON.parse(localStorage.getItem(KEY)) || {}) }; }
+  catch { return { regs: {}, bosses: {}, wins: {}, losses: {} }; }
 }
 function persist() { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch {} }
 function mark(group, id, level) {
@@ -21,7 +21,9 @@ function mark(group, id, level) {
 export const seeRegular = (id) => mark('regs', id, 1);
 export const ownRegular = (id) => mark('regs', id, 2);
 export const faceBoss = (id) => mark('bosses', id, 1);
-export const beatBoss = (id) => mark('bosses', id, 2);
+export const beatBoss = (id) => { data.wins[id] = (data.wins[id] || 0) + 1; mark('bosses', id, 2); persist(); };
+// Lost a round to this Landlord. The Album shows your nemesis.
+export const lostToBoss = (id) => { data.losses[id] = (data.losses[id] || 0) + 1; persist(); };
 
 const ORDER = ['common', 'uncommon', 'rare', 'legendary'];
 let tab = 'regs';
@@ -61,17 +63,21 @@ function render() {
   } else {
     const beaten = BOSSES.filter((b) => data.bosses[b.id] === 2).length;
     const faced = BOSSES.filter((b) => data.bosses[b.id]).length;
-    count.textContent = `${beaten} of ${BOSSES.length} beaten · ${faced} faced`;
+    const nemesis = BOSSES.filter((b) => data.losses[b.id]).sort((a, b) => data.losses[b.id] - data.losses[a.id])[0];
+    count.textContent = `${beaten} of ${BOSSES.length} beaten · ${faced} faced${nemesis ? ` · Nemesis: ${nemesis.face} ${nemesis.name}` : ''}`;
     grid.className = 'album-grid bosses';
     grid.innerHTML = BOSSES.map((b) => {
       const lvl = data.bosses[b.id] || 0;
       if (!lvl) return `<div class="album-boss unknown"><span class="ab-face">?</span><span class="ab-name">???</span><span class="ab-tag">${b.tier === 1 ? 'Early Pints' : 'Late Pints'}</span></div>`;
-      return `<button class="album-boss${lvl === 2 ? ' beaten' : ''}" data-id="${b.id}"><span class="ab-face">${b.face}</span>
-        <span class="ab-name">${b.name}</span><span class="ab-tag">${lvl === 2 ? 'Beaten' : 'Faced'}</span></button>`;
+      const w = data.wins[b.id] || 0, l = data.losses[b.id] || 0;
+      const rec = (w || l) ? `${w}W ${l}L` : (lvl === 2 ? 'Beaten' : 'Faced');
+      return `<button class="album-boss${lvl === 2 ? ' beaten' : ''}${nemesis && nemesis.id === b.id ? ' nemesis' : ''}" data-id="${b.id}"><span class="ab-face">${b.face}</span>
+        <span class="ab-name">${b.name}</span><span class="ab-tag">${rec}</span></button>`;
     }).join('');
     grid.querySelectorAll('button[data-id]').forEach((el) => el.addEventListener('click', () => {
       const b = BOSSES.find((x) => x.id === el.dataset.id);
-      detail.innerHTML = `<b>${b.face} ${b.name}</b><br>${b.rule}`;
+      const w = data.wins[b.id] || 0, l = data.losses[b.id] || 0;
+      detail.innerHTML = `<b>${b.face} ${b.name}</b><br>${b.rule}<br><span class="muted">Beaten ${w} time${w === 1 ? '' : 's'}, lost to ${l} time${l === 1 ? '' : 's'}.</span>`;
     }));
   }
 }

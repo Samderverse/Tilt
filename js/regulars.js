@@ -207,6 +207,13 @@ export const REGULARS = [
     line: (ctx) => ctx.win.line.id.startsWith('diag') && { xmult: 1.5 },
   },
 
+  {
+    id: 'luke', name: 'Long-Haul Luke', face: '🧳', rarity: 'rare',
+    desc: '+2 Multi on winning spins for every Landlord beaten this run. He\'s in it for the long haul.',
+    end: (ctx) => ctx.wins.length > 0 && (ctx.run.stats.bossesBeaten || 0) > 0 && { mult: 2 * ctx.run.stats.bossesBeaten },
+    status: (s, run) => `Landlords beaten: ${run?.stats?.bossesBeaten || 0} (currently +${2 * (run?.stats?.bossesBeaten || 0)} Multi)`,
+  },
+
   // ---------- Legendary (crisp packets only) ----------
   {
     id: 'guvnor', name: 'The Guv\'nor', face: '👑', rarity: 'legendary',

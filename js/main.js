@@ -15,7 +15,7 @@ import { MACHINES, MACHINE_BY_ID, machineOf } from './machines.js';
 import { setScenery, miniCabinet } from './scenery.js';
 import * as Drunk from './drunk.js';
 import { VERSION } from './version.js';
-import { openAlbum, bindAlbum, seeRegular, ownRegular, faceBoss, beatBoss } from './album.js';
+import { openAlbum, bindAlbum, seeRegular, ownRegular, faceBoss, beatBoss, lostToBoss } from './album.js';
 
 const SAVE_KEY = 'tilt.run.v3';
 const BEST_KEY = 'tilt.best.v2';
@@ -45,7 +45,7 @@ const el = {
   credits: $('credits-list'),
   bumpBtn: $('bump-btn'), bumpRisk: $('bump-risk'),
   albumBtn: $('album-btn'), settingsAlbum: $('settings-album'), speedSeg: $('speed-seg'), optShake: $('opt-shake'),
-  versionLine: $('version-line'), machines: $('machines'), machineList: $('machine-list'), machinesCancel: $('machines-cancel'),
+  versionLine: $('version-line'), bugBtn: $('bug-btn'), machines: $('machines'), machineList: $('machine-list'), machinesCancel: $('machines-cancel'),
   howtoBtn: $('howto-btn'), tutorialBtn: $('tutorial-btn'), settingsHowto: $('settings-howto'), optTips: $('opt-tips'),
   // Bar
   barNext: $('bar-next'), barMoney: $('bar-money'), barRegs: $('bar-regulars'), barRegCount: $('bar-reg-count'),
@@ -55,7 +55,7 @@ const el = {
   sheetDesc: $('sheet-desc'), sheetStatus: $('sheet-status'), sheetActions: $('sheet-actions'),
   picker: $('picker'), pickerPanel: document.querySelector('.picker-panel'), pickerKicker: $('picker-kicker'),
   pickerTitle: $('picker-title'), pickerSub: $('picker-sub'), pickerReels: $('picker-reels'), pickerCancel: $('picker-cancel'),
-  packet: $('packet'), packetBag: $('packet-bag'), packetTitle: $('packet-title'), packetChoices: $('packet-choices'), packetSkip: $('packet-skip'),
+  packet: $('packet'), packetBag: $('packet-bag'), packetTitle: $('packet-title'), packetSub: $('packet-sub'), packetChoices: $('packet-choices'), packetSkip: $('packet-skip'),
 };
 
 let run = null;
@@ -68,10 +68,24 @@ function load() {
   try {
     const r = JSON.parse(localStorage.getItem(SAVE_KEY));
     if (!r || r.v !== 3) return null;
+    if (!saveLooksOk(r)) { console.warn('Tilt: saved run was broken, cleared it'); clearSave(); return null; }
     // A run that was lost or won but never closed off properly (e.g. the app was shut mid-animation)
     // is still returned, so startRun can show its proper ending.
     return r;
   } catch { return null; }
+}
+// Catch a save that got mangled (half-written, or from a version with different data) before it can freeze the game.
+const PHASES = ['ready', 'spinning', 'nudge', 'scoring', 'cleared', 'failed', 'bar', 'won'];
+function saveLooksOk(r) {
+  try {
+    if (!PHASES.includes(r.phase)) return false;
+    if (!Number.isFinite(r.round) || r.round < 1 || !Number.isFinite(r.money) || !Number.isFinite(r.score)) return false;
+    if (!Array.isArray(r.reels) || r.reels.length !== 3 || r.reels.some((st) => !Array.isArray(st) || st.length < 3 || st.some((e) => !SYMBOLS[baseId(e)]))) return false;
+    if (!Array.isArray(r.regulars) || r.regulars.some((x) => !x || !REG_BY_ID[x.id])) return false;
+    if (!Array.isArray(r.stops) || r.stops.length !== 3 || !Array.isArray(r.held)) return false;
+    if (!r.stats || !r.levels) return false;
+    return true;
+  } catch { return false; }
 }
 function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch {} }
 function getBest() { try { return Number(localStorage.getItem(BEST_KEY)) || 0; } catch { return 0; } }
@@ -95,7 +109,10 @@ function bestText() {
 
 // ---------- Helpers ----------
 const speed = () => settings.speed || 1;
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms / speed()));
+// Tapping SKIP while a spin is scoring collapses every wait to a flicker.
+let skipping = false;
+let animating = false; // true while a spin's result is being played out
+const sleep = (ms) => new Promise((r) => setTimeout(r, skipping ? Math.min(ms, 40) / 4 : ms / speed()));
 
 // 12,450 · 450K · 1.2M · 3.4B: keeps big endless-mode numbers readable.
 function fmt(n) {
@@ -260,9 +277,11 @@ function renderControls() {
     el.reels[i].classList.toggle('held', run.held[i]);
   });
   const collecting = run.phase === 'nudge';
-  el.spinBtn.textContent = collecting ? 'COLLECT' : 'SPIN';
+  const scoring = animating && !skipping;
+  el.spinBtn.textContent = scoring ? 'SKIP ▶' : collecting ? 'COLLECT' : 'SPIN';
   el.spinBtn.classList.toggle('collect', collecting);
-  el.spinBtn.disabled = busy || !(run.phase === 'ready' || run.phase === 'nudge');
+  el.spinBtn.classList.toggle('skip', scoring);
+  el.spinBtn.disabled = scoring ? false : busy || !(run.phase === 'ready' || run.phase === 'nudge');
   const bumpable = run.phase === 'nudge' && G.canBump(run) && !run.tilted;
   el.bumpBtn.classList.toggle('hidden', !bumpable);
   el.bumpBtn.disabled = busy || !bumpable;
@@ -506,6 +525,7 @@ function showPreview() {
 
 async function onSpinButton() {
   A.unlock();
+  if (animating && !skipping) { skipping = true; renderControls(); return; }
   if (busy) return;
   if (run.phase === 'ready') await doSpin();
   else if (run.phase === 'nudge') await doCollect();
@@ -546,9 +566,13 @@ async function doSpin() {
 async function doCollect() {
   busy = true;
   run.phase = 'scoring';
+  skipping = false;
+  animating = true;
   renderControls();
   const result = G.collect(run);
   await playResult(result);
+  animating = false;
+  skipping = false;
   renderRegulars(el.regs, 'game');
   save();
 
@@ -851,7 +875,17 @@ function statsHTML() {
     <div><b>${s.bossesBeaten}</b>Landlords beaten</div>
     <div><b>${fmt(s.bestSpin)}</b>Best spin</div>
     <div><b>${s.tilts || 0}</b>Tilts</div>
-  </div><p class="muted">Seed ${run.seed}</p>`;
+  </div><p class="muted strip-line">Reels: ${stripSummary()}</p><p class="muted">Seed ${run.seed}</p>`;
+}
+
+// "⭐ 22 · 7 11 · BAR 9 · ✨ 4 gold": what the reel strips had become by the end.
+function stripSummary() {
+  const counts = {};
+  let gold = 0;
+  for (const strip of run.reels) for (const e of strip) { counts[baseId(e)] = (counts[baseId(e)] || 0) + 1; if (isGold(e)) gold++; }
+  const parts = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([id, n]) => `${id === 'bar' ? 'BAR' : SYMBOLS[id].icon} ${n}`);
+  if (gold) parts.push(`✨ ${gold} gold`);
+  return parts.join(' · ');
 }
 
 const SHARE_FOOT = '<button class="menu-btn wide" id="share-run">📤 Share this run</button>';
@@ -866,6 +900,7 @@ async function shareRun() {
     `${m.icon} ${m.name}`,
     `👑 ${s.bossesBeaten} Landlords beaten · 💥 Best spin ${fmt(s.bestSpin)}`,
     `🧑‍🤝‍🧑 ${run.regulars.map((r) => REG_BY_ID[r.id].face).join(' ') || 'No Regulars'}`,
+    `🎰 ${stripSummary()}`,
     location.origin + location.pathname,
   ].join('\n');
   try {
@@ -883,6 +918,7 @@ async function gameOver() {
   setBest(run.round - 1);
   clearSave();
   const i = info();
+  if (i.boss) lostToBoss(i.boss.id);
   await showOverlay({
     face: i.boss ? i.boss.face : null,
     kicker: i.boss ? `${i.boss.name} wins` : (i.endless ? `Endless · Pint ${i.pint}` : `Round ${i.round}`),
@@ -902,7 +938,7 @@ async function victory() {
   A.setBossMode(false);
   FX.burst(innerWidth / 2, innerHeight / 2, 120, 'confetti', 2);
   FX.flash('#ffc23d', 800);
-  A.sfx.clear();
+  A.sfx.jackpot();
   save();
   const choice = await showOverlay({
     face: '🏆',
@@ -930,6 +966,7 @@ function enterBar() {
   [...document.body.classList].filter((c) => c.startsWith('rule-')).forEach((c) => document.body.classList.remove(c));
   A.setBossMode(false);
   A.setMuffled(true);
+  A.sfx.pour();
   showScreen('bar');
   renderBar();
   el.barScreen.querySelector('.bar-scroll').scrollTop = 0;
@@ -1032,7 +1069,7 @@ function openRegularSheet(slot, where) {
       onClick: (btn) => {
         if (!btn.dataset.armed) { btn.dataset.armed = '1'; btn.textContent = 'Tap again to sell'; return; }
         const v = S.sell(run, slot);
-        A.sfx.cash();
+        A.sfx.chaching();
         toast(`${d.name} left the pub. +£${v}`);
         save(); closeSheet(); renderBar();
       },
@@ -1061,6 +1098,7 @@ function openItemSheet(kind, idx) {
   let status = reason;
   if (item.type === 'mat') status = status || `${SYMBOLS[item.id].name} is level ${(run.levels[item.id] || 0) + 1} now. Each level makes the next Mat £1 dearer.`;
   if (item.type === 'special') status = status || 'Permanent for the rest of the run.';
+  if (item.type === 'packet' && item.id === 'prawn' && run.regulars.length >= maxRegulars(run)) status = status || 'Your machine is full: whoever you pick swaps in for one of your Regulars (sold at their usual price).';
   openSheet({
     art: itemArt(item, 'lg'),
     tag: inf.tag, tagColour: inf.colour, name: inf.name, desc: inf.desc, status,
@@ -1094,7 +1132,7 @@ function buyItem(kind, idx) {
   const res = S.buy(run, kind, idx);
   if (!res.ok) { A.sfx.denied(); toast(res.reason); return; }
   if (res.packet) { bought(); openPacket(res.packet); return; }
-  if (res.dip) { bought(res.dip.text); return; }
+  if (res.dip) { A.sfx.scratch(); bought(res.dip.text); return; }
   if (res.special) {
     FX.flash('#ffe9a6', 350);
     FX.burstFrom(el.special, 30, 'coin', 1);
@@ -1108,6 +1146,7 @@ function buyItem(kind, idx) {
     return;
   }
   FX.burstFrom(el.barRegs, 18, 'confetti', 0.8);
+  A.sfx.cheers(0.25);
   bought(`${REG_BY_ID[item.id].name} joins you at the machine.`);
 }
 
@@ -1144,7 +1183,7 @@ function openPicker(scratchId, onApply, onCancel = null) {
       el.picker.classList.add('hidden');
       pickerDone = null;
       FX.flash('#ffe9a6', 300);
-      A.sfx.coin();
+      A.sfx.scratch();
       const verb = { gold: `Gilded a ${name}`, copy: `Copied a ${name}`, bin: `Binned a ${name}`, wild: `${name} turned Wild` }[scratchId];
       bought(`${verb} on reel ${r + 1}.`);
     }));
@@ -1153,34 +1192,75 @@ function openPicker(scratchId, onApply, onCancel = null) {
 }
 
 // ---------- Crisp packets ----------
+let packetBack = null; // set while the swap chooser is open
 function openPacket(pending) {
+  packetBack = null;
   const pk = S.PACKET_BY_ID[pending.id];
   el.packetBag.innerHTML = crispPacket(pending.id, true);
   el.packetBag.classList.remove('open');
   el.packetTitle.textContent = pk.name;
-  A.sfx.spin();
+  const full = pending.id === 'prawn' && run.regulars.length >= maxRegulars(run);
+  el.packetSub.textContent = full ? 'Pick one. Your machine is full, so they\'ll take someone\'s place.' : 'Pick one.';
+  el.packetSkip.textContent = 'Skip';
+  A.sfx.crispOpen();
   el.packetChoices.innerHTML = '';
   el.packet.classList.remove('hidden');
   setTimeout(() => {
     el.packetBag.classList.add('open');
-    A.sfx.shatter();
+    A.sfx.crunch();
     FX.burstFrom(el.packetBag, 24, 'confetti', 0.9);
     pending.choices.forEach((c) => { if (c.type === 'regular') seeRegular(c.id); });
-    el.packetChoices.innerHTML = pending.choices.map((c, i) => {
-      const inf = S.itemInfo(c);
-      return `<button class="item choice item-${c.type}" data-i="${i}" style="--ic:${inf.colour}">
-        ${itemArt(c)}
-        ${c.type === 'mat' ? `<span class="nm">${inf.name}</span>` : ''}<span class="desc">${inf.desc}</span></button>`;
-    }).join('');
-    el.packetChoices.querySelectorAll('.item').forEach((b) => b.addEventListener('click', () => choosePacket(pending, Number(b.dataset.i))));
+    renderPacketChoices(pending);
   }, 1400);
+}
+
+function renderPacketChoices(pending) {
+  el.packetChoices.innerHTML = pending.choices.map((c, i) => {
+    const inf = S.itemInfo(c);
+    return `<button class="item choice item-${c.type}" data-i="${i}" style="--ic:${inf.colour}">
+      ${itemArt(c)}
+      ${c.type === 'mat' ? `<span class="nm">${inf.name}</span>` : ''}<span class="desc">${inf.desc}</span></button>`;
+  }).join('');
+  el.packetChoices.querySelectorAll('.item').forEach((b) => b.addEventListener('click', () => choosePacket(pending, Number(b.dataset.i))));
+}
+
+// Slots full: show the line-up and ask who's leaving. Selling pays the usual value.
+function openSwap(pending, ci) {
+  const c = pending.choices[ci];
+  const newName = REG_BY_ID[c.id].name;
+  el.packetTitle.textContent = 'Who\'s leaving?';
+  el.packetSub.textContent = `Your machine is full. Pick a Regular to sell, and ${newName} takes their place.`;
+  el.packetSkip.textContent = 'Back';
+  el.packetChoices.innerHTML = run.regulars.map((r, slot) => {
+    const d = REG_BY_ID[r.id];
+    return `<button class="item choice item-regular swap-out" data-slot="${slot}" style="--ic:${RARITY[d.rarity].colour}">
+      ${regularCard(r.id, 'sm', regBadge(r))}<span class="desc">Sell for £${sellValue(r)}</span></button>`;
+  }).join('');
+  el.packetChoices.querySelectorAll('.item').forEach((b) => b.addEventListener('click', () => {
+    const slot = Number(b.dataset.slot);
+    const oldName = REG_BY_ID[run.regulars[slot].id].name;
+    const res = S.swapFromPacket(run, ci, slot);
+    if (!res.ok) { A.sfx.denied(); return; }
+    el.packet.classList.add('hidden');
+    A.sfx.chaching();
+    A.sfx.cheers(0.35);
+    FX.burstFrom(el.barRegs, 18, 'confetti', 0.8);
+    bought(`${oldName} left (+£${res.value}). ${newName} takes their spot.`);
+  }));
+  // Skip now reads Back, and returns to the packet's choices.
+  packetBack = () => {
+    el.packetTitle.textContent = S.PACKET_BY_ID[pending.id].name;
+    el.packetSub.textContent = 'Pick one. Your machine is full, so they\'ll take someone\'s place.';
+    el.packetSkip.textContent = 'Skip';
+    renderPacketChoices(pending);
+  };
 }
 
 function choosePacket(pending, ci) {
   const c = pending.choices[ci];
   if (c.type === 'regular' && run.regulars.length >= maxRegulars(run)) {
-    A.sfx.denied();
-    toast('No room at the machine. Skip, or sell one first.');
+    A.sfx.tick();
+    openSwap(pending, ci);
     return;
   }
   if (c.type === 'scratch' && S.SCRATCH_BY_ID[c.id].target) {
@@ -1195,8 +1275,9 @@ function choosePacket(pending, ci) {
   const res = S.pickFromPacket(run, ci);
   if (!res.ok) { A.sfx.denied(); toast(res.reason); return; }
   el.packet.classList.add('hidden');
-  if (res.dip) return bought(res.dip.text);
+  if (res.dip) { A.sfx.scratch(); return bought(res.dip.text); }
   if (c.type === 'mat') return bought(`${SYMBOLS[c.id].name} levelled up!`);
+  A.sfx.cheers(0.25);
   bought(`${REG_BY_ID[c.id].name} joins you at the machine.`);
 }
 
@@ -1267,7 +1348,27 @@ function chooseMachine() {
   });
 }
 
+// First ever game on this phone: offer the tutorial once.
+const FIRST_KEY = 'tilt.first.v1';
+async function firstTimeOffer() {
+  let seen = false;
+  try { seen = !!localStorage.getItem(FIRST_KEY) || getBest() > 0; } catch {}
+  if (seen) return false;
+  try { localStorage.setItem(FIRST_KEY, '1'); } catch {}
+  const choice = await showOverlay({
+    face: '🤵', kicker: 'First time in?', title: 'Fancy a quick tutorial?',
+    body: '<p>The Barman will talk you through your first spins, the Bar and your first Landlord. It\'s a normal run, just with tips.</p>',
+    btn: 'Tutorial run', alt: 'Just play',
+  });
+  if (choice === 'alt') return false;
+  resetTips();
+  A.playMusic('main');
+  startRun(G.newRun(randomSeed()));
+  return true;
+}
+
 async function newRunFlow(fromEnd = false) {
+  if (!fromEnd && await firstTimeOffer()) return;
   const id = await chooseMachine();
   if (!id) {
     if (fromEnd) showScreen('title');
@@ -1352,6 +1453,20 @@ function bindSettings() {
   el.settingsBtn.addEventListener('click', () => { A.unlock(); openSettings(); });
   el.barSettingsBtn.addEventListener('click', () => { A.unlock(); openSettings(); });
   el.settingsClose.addEventListener('click', closeSettings);
+  el.bugBtn.addEventListener('click', async () => {
+    const i = run ? info() : null;
+    const lines = [
+      `Tilt v${VERSION} bug report`,
+      run ? `Run: seed ${run.seed}, ${machineOf(run).name}, Pint ${i.pint} round ${i.round}${run.endless ? ' (endless)' : ''}${i.boss ? ', Landlord ' + i.boss.name : ''}` : 'Run: none',
+      run ? `Phase ${run.phase}, spins left ${run.spinsLeft}, score ${run.score}/${i.target}, £${run.money}` : '',
+      run ? `Regulars: ${run.regulars.map((r) => r.id).join(', ') || 'none'}; Specials: ${(run.specials || []).join(', ') || 'none'}` : '',
+      `Settings: speed ${settings.speed}x, reduced ${settings.reducedFx}, drunk ${settings.drunkFx}`,
+      `Screen ${innerWidth}×${innerHeight}, ${navigator.userAgent}`,
+      'What happened: ',
+    ].filter(Boolean).join('\n');
+    try { await navigator.clipboard.writeText(lines); toast('Copied. Paste it in the group chat and say what happened.', 3000); }
+    catch { toast('Couldn\'t copy. Take a screenshot of this instead: ' + lines.split('\n')[1], 5000); }
+  });
   el.abandon.addEventListener('click', () => {
     if (!confirm('Abandon this run? It can\'t be undone.')) return;
     clearSave();
@@ -1429,7 +1544,10 @@ function boot() {
     A.playMusic('main');
     const saved = load();      // read fresh: the run may have ended or been abandoned since the page loaded
     if (isDebug) { const r = debugRun(); startRun(r, r.phase === 'bar'); }
-    else if (saved) startRun(saved, true);
+    else if (saved) {
+      try { startRun(saved, true); }
+      catch (err) { console.error(err); clearSave(); toast('That run couldn\'t be loaded, so it\'s been cleared. Sorry!', 3200); showScreen('title'); }
+    }
     else newRunFlow();
   });
   bindHowTo();
@@ -1482,7 +1600,7 @@ function boot() {
   // Bar controls
   el.restock.addEventListener('click', () => {
     if (!S.reroll(run)) { A.sfx.denied(); return; }
-    A.sfx.spin();
+    A.sfx.bell();
     save();
     renderBar();
     el.stock.querySelectorAll('.item').forEach((n) => { n.style.animation = 'deal .4s cubic-bezier(.2,1.3,.4,1) both'; });
@@ -1495,6 +1613,7 @@ function boot() {
     if (cb) cb();
   });
   el.packetSkip.addEventListener('click', () => {
+    if (packetBack) { const f = packetBack; packetBack = null; f(); return; }
     S.pickFromPacket(run, null);
     el.packet.classList.add('hidden');
     save();

@@ -343,6 +343,8 @@ body.boss.rule-bouncer .payline[data-row="2"] {
 .spin-btn.collect { background: radial-gradient(circle at 50% 30%, #ffe08a, #e09a12 70%); box-shadow: 0 8px 0 #7a4f06, 0 0 30px rgba(255,194,61,.5); color: #3a1c00; }
 .spin-btn:active:not(:disabled) { transform: translateY(5px); box-shadow: 0 3px 0 #6e0d14; }
 .spin-btn:disabled { filter: grayscale(.7) brightness(.7); }
+.album-boss.nemesis { outline: 2px solid #ff4b3a; outline-offset: -2px; }
+.spin-btn.skip { background: radial-gradient(circle at 50% 30%, #5a5a6a, #2a2a36 70%); box-shadow: 0 8px 0 #121218; color: #e9e9f2; font-size: 20px; }
 .seed { font-size: 11px; opacity: .4; margin: 8px 0 0; }
 
 /* ---------- Effects ---------- */

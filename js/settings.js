@@ -37,4 +37,5 @@ export const CREDITS = [
   { what: 'Blank spin', who: 'skypescoop' },
   { what: 'Tilt glitch', who: 'Edwardo Ching' },
   { what: 'Landlord music', who: '"Circuit-Runes Collapse" by LoFi Lich' },
+  { what: 'Crisps, scratchcard, cheers, hiccups, bell, till, jackpot, buzzer, beer pour', who: 'Add sources here' },
 ];

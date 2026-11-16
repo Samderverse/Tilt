@@ -31,6 +31,7 @@ Prices scale with power:
 | Restock | £2, then +£1 each time per visit |
 
 - **Regulars** (up to 5): Tilt's jokers. They trigger left to right, so order matters. Tap one to sell or move it.
+  If your machine is full when you open Prawn Cocktail crisps, you pick who leaves (sold at their usual price) and the new Regular takes their slot.
 - **Landlord's Specials**: one big permanent upgrade offered per Pint.
   Extra Pocket (+1 Hold, £10), Loose Shoes (+1 Nudge, £12), Happy Hour (+1 Spin, £15),
   Bigger Bar (+1 item in stock, £8), Piggy Bank (interest cap +£2, £8), Lock-In (6th Regular slot, £16).
@@ -94,9 +95,12 @@ The more Pints you've had, the wobblier the pub gets:
 - Test with `?drunk=0..4`.
 
 ## Extras
-- **Album**: every Regular you've seen or recruited, and every Landlord you've faced or beaten.
+- **Album**: every Regular you've seen or recruited, and every Landlord you've faced or beaten, with a win/loss record per Landlord and your nemesis marked.
 - **Run summary**: your line-up and stats at the end of a run, with a Share button.
-- **Game speed**: 1× / 2× / 4× in Settings.
+- **Game speed**: 1× / 2× / 4× in Settings. While a spin is scoring, the SPIN button becomes **SKIP ▶** to jump to the total.
+- **Bug report**: Settings → "Copy bug report" copies the version, seed, round, phase and phone details for pasting into a chat.
+- **First launch**: the game offers the tutorial once, the first time Tap to Play is pressed on a phone.
+- A saved run that fails its sanity check is cleared instead of freezing the game.
 - **Updates & offline**: players get a "new version" banner, and the game works offline once loaded.
 
 ## Publishing an update
@@ -117,11 +121,12 @@ That's what makes the "new version available" banner appear for everyone.
 - Desktop keys: Space spins/collects, 1–3 hold, Q/A W/S E/D nudge reels up/down
 
 ## Sound effects
-- `audio/sfx/`: 14 built-in clips, trimmed, faded and levelled.
+- `audio/sfx/`: 26 built-in clips, trimmed, faded and levelled.
 - `js/sfxmap.js`: which clip plays for each game moment, with its volume. `'synth'` means the built-in beep
   (none at the moment).
 - Sources: slot machine effects by sonidosKMD, glass smash by Epic Sound Effects, game over by Webiverse Vids,
   blank spin by skypescoop, tilt glitch by Edwardo Ching. Landlord music: "Circuit-Runes Collapse" by LoFi Lich.
+  v1.10 clips (crisps, crunch, scratchcard, hiccups, buzzer, cheers, till, jackpot, beer pour, last orders bell): add sources in `js/settings.js`.
 
 ## Audio
 - `audio/main.mp3`, `audio/boss.mp3` (Landlord music): levelled to the same loudness, trimmed for looping
@@ -160,3 +165,4 @@ That's what makes the "new version available" banner appear for everyone.
 - v1.6: machine themes ✅
 - v1.7–1.8: sound effects, Landlord music ✅
 - v1.9: drunk effects ✅
+- v1.10: Regular swap from crisps, Long-Haul Luke, SKIP, bug report, Album records, 11 new sounds ✅
