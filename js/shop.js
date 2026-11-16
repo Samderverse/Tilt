@@ -3,11 +3,12 @@ import { makeRng } from './rng.js';
 import { SYMBOLS, BASE_SYMBOLS, baseId, isGold } from './symbols.js';
 import { REGULARS, REG_BY_ID, RARITY, maxRegulars, priceOf, sellValue } from './regulars.js';
 import { machineOf } from './machines.js';
+import { stakeMods } from './stakes.js';
 
 // Machine discounts (Student Union, Working Men's Club).
 export function cost(run, base, isRegular = false) {
   const m = machineOf(run);
-  return Math.max(1, base - (m.discount || 0) - (isRegular ? m.regDiscount || 0 : 0));
+  return Math.max(1, base + stakeMods(run).barPlus - (m.discount || 0) - (isRegular ? m.regDiscount || 0 : 0));
 }
 
 // Prices scale with power. Beer Mats get £1 dearer for each level that symbol already has.

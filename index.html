@@ -169,12 +169,13 @@
       </div>
 
       <div class="bar-scroll">
+        <div class="bar-rumour" id="bar-rumour"></div>
         <div class="bar-section-head">
           <h3>Your Regulars</h3>
           <span class="muted" id="bar-reg-count">0 / 5</span>
         </div>
         <div class="regulars" id="bar-regulars"></div>
-        <p class="hint">Tap a Regular to sell or move them. They act left to right.</p>
+        <p class="hint">Tap a Regular for details, drag to reorder. They act left to right.</p>
 
         <div class="chalkboard">
           <div class="bar-section-head">
@@ -212,6 +213,7 @@
         <h2 id="sheet-name"></h2>
         <p id="sheet-desc"></p>
         <p class="sheet-status" id="sheet-status"></p>
+        <div class="sheet-extra" id="sheet-extra"></div>
         <div class="sheet-actions" id="sheet-actions"></div>
       </div>
     </div>
@@ -272,6 +274,8 @@
       <div class="panel machines-panel">
         <p class="panel-kicker">New run</p>
         <h2>Pick your machine</h2>
+        <div class="stake-row" id="stake-row"></div>
+        <p class="stake-rule" id="stake-rule"></p>
         <div id="machine-list" class="machine-list"></div>
         <button class="link-btn" id="machines-cancel">Back</button>
       </div>
@@ -310,6 +314,7 @@
         <p class="setting-note hidden" id="drunk-note">Drunk effects are off while Reduced effects is on.</p>
         <button class="menu-btn wide" id="settings-howto">📖 How to Play</button>
         <button class="menu-btn wide" id="settings-album">📚 Album</button>
+        <button class="menu-btn wide" id="settings-whatsnew">📰 What's new</button>
         <div class="settings-actions">
           <button class="link-btn danger" id="abandon-btn">Abandon run</button>
           <button class="big-btn" id="settings-close">Done</button>

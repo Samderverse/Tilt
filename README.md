@@ -15,8 +15,22 @@ A chaotic pub fruit machine roguelike by Samderverse. Spin, hold, nudge and surv
 - Earn £ each round: round reward + £1 per spare spin (max £3) + interest (£1 per £5 held, max £3).
 - Beat Pint 8's Landlord to win the run, then keep everything and carry on in **Endless** mode (targets grow ×1.75 per Pint).
 
+## Stakes
+Difficulty tiers, picked in the machine picker. Each keeps every rule below it; beat the pub on a stake to unlock the next.
+
+| Stake | Adds |
+|---|---|
+| 🍋 Shandy | the game as it is |
+| 🍺 Session | spare spins pay nothing |
+| 🍂 Bitter | everything at the Bar costs £1 more |
+| 🏅 Best | 4 Regular slots (Lock-In still adds one) |
+| 💪 Strong | every target ×1.2 |
+| 🚢 Export | 5 spins a round |
+
+Progress (`tilt.stakes.v1`) records the highest stake unlocked and the best stake beaten per machine; the picker shows both. Older saves load as Shandy.
+
 ## Learning to play
-- **How to Play**: a 7-page illustrated guide, on the title screen and in Settings.
+- **How to Play**: an 8-page illustrated guide, on the title screen and in Settings.
 - **Tutorial run**: starts a fresh run where the Barman coaches you through your first spins, the Bar and your first Landlord. Tips show once each; turn them back on any time in Settings ("Barman's tips").
 
 ## The Bar (between rounds)
@@ -30,7 +44,8 @@ Prices scale with power:
 | Crisps | Ready Salted £4 (1 of 3 Beer Mats), Salt & Vinegar £5 (1 of 3 Scratchcards), Prawn Cocktail £7 (1 of 2 Regulars) |
 | Restock | £2, then +£1 each time per visit |
 
-- **Regulars** (up to 5): Tilt's jokers. They trigger left to right, so order matters. Tap one to sell or move it.
+- **Regulars** (up to 5): Tilt's jokers. They trigger left to right, so order matters. Tap one for details or to sell; drag it along the row to reorder.
+- The Landlord this Pint is building up to stays at the top of the Bar (face, name, rule) so you can shop for them. A Regular's shop card shows your current line-up.
   If your machine is full when you open Prawn Cocktail crisps, you pick who leaves (sold at their usual price) and the new Regular takes their slot.
 - **Landlord's Specials**: one big permanent upgrade offered per Pint.
   Extra Pocket (+1 Hold, £10), Loose Shoes (+1 Nudge, £12), Happy Hour (+1 Spin, £15),
@@ -102,10 +117,13 @@ The more Pints you've had, the wobblier the pub gets:
 - **First launch**: the game offers the tutorial once, the first time Tap to Play is pressed on a phone.
 - A saved run that fails its sanity check is cleared instead of freezing the game.
 - **Updates & offline**: players get a "new version" banner, and the game works offline once loaded.
+- **What's new**: shown once per version on opening (from `js/changelog.js`), and always available in Settings. Add a block to the top of `CHANGELOG` with every release.
+- The target box reads "Need X/spin" while you're short of the target.
 
 ## Publishing an update
 Change the version number in **both** `js/version.js` and `version.json` (e.g. 1.5.0 → 1.5.1) every time you upload.
-That's what makes the "new version available" banner appear for everyone.
+That's what makes the "new version available" banner appear for everyone. Add the player-facing notes to `js/changelog.js`
+under the same version number so the "What's new" screen shows them; bump the cache name in `sw.js` too.
 
 ## Testing shortcuts
 - `?seed=ABC123` replays an exact run (seed shown under the SPIN button)
@@ -155,6 +173,12 @@ That's what makes the "new version available" banner appear for everyone.
 - `js/version.js`, `version.json`, `sw.js`: update notice and offline play
 - `icons/`, `manifest.json`: app icon and home-screen install
 
+## Codex (a tool for me, not part of the game)
+`node tools/build-codex.mjs [output path]` writes **tilt-codex.html**: one self-contained page listing every
+Regular, Landlord, symbol, Bar item, machine, sound (playable) and balance table, read straight from the
+modules above so it can't go stale. Default output is `../tilt-codex.html`, outside the repo. Nothing in the
+game loads it, and `tools/` can be deleted before uploading if you'd rather not have it in the repo.
+
 ## Roadmap
 - Drop A: holds, nudges, Pints, Landlords, effects, audio, icon ✅
 - Drop B: The Bar (shop), Regulars, Beer Mats, Scratchcards, crisp packets ✅
@@ -166,3 +190,4 @@ That's what makes the "new version available" banner appear for everyone.
 - v1.7–1.8: sound effects, Landlord music ✅
 - v1.9: drunk effects ✅
 - v1.10: Regular swap from crisps, Long-Haul Luke, SKIP, bug report, Album records, 11 new sounds ✅
+- v2.0: Stakes, Landlord in the Bar, drag to reorder, line-up in shop cards, pace hint, What's new ✅

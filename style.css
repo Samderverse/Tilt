@@ -1526,3 +1526,53 @@ body[data-drunk="3"] .marquee, body[data-drunk="4"] .marquee { filter: brightnes
 
 body.reduced-fx .drunk-vignette, body.reduced-fx .reels-ghost, body.reduced-fx .hic-text { display: none; }
 @media (prefers-reduced-motion: reduce) { .drunk-vignette, .reels-ghost, .hic-text { display: none; } }
+
+/* ---------- v2.0: Stakes ---------- */
+.stake-row { display: flex; gap: 6px; justify-content: center; margin: 4px 0 6px; }
+.stake-chip {
+  width: 42px; height: 42px; border-radius: 50%; font-size: 20px; line-height: 1; padding: 0;
+  border: 2px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); color: var(--cream);
+  -webkit-appearance: none; appearance: none; cursor: pointer; transition: transform .12s, border-color .12s;
+}
+.stake-chip.on { border-color: var(--gold); background: rgba(255,194,61,.22); box-shadow: 0 0 12px rgba(255,194,61,.5); transform: scale(1.1); }
+.stake-chip.locked { opacity: .35; font-size: 15px; cursor: default; }
+.stake-rule { font-size: 12.5px; line-height: 1.35; text-align: center; margin: 0 0 10px; color: var(--cream); }
+.stake-rule b { color: var(--gold); font-weight: 500; }
+.stake-rule .muted { display: block; font-size: 11px; opacity: .65; margin-top: 2px; }
+.mc-best { display: block; font-size: 10.5px; color: var(--gold); opacity: .9; margin-top: 2px; }
+.mc-best:empty { display: none; }
+.unlock-note { background: rgba(255,194,61,.14); border: 1px solid rgba(255,194,61,.5); border-radius: 10px; padding: 8px 10px; font-size: 13px; margin: 8px 0; }
+.unlock-note b { color: var(--gold); font-weight: 500; }
+
+/* ---------- v2.0: Bar refinements ---------- */
+#bar-regulars { touch-action: pan-y; }
+#bar-regulars .reg-card[data-slot] { touch-action: pan-y; }
+.reg-card.dragging { z-index: 5; box-shadow: 0 10px 24px rgba(0,0,0,.6), 0 0 0 2px var(--gold); transition: none; }
+.reg-card.drop-target { outline: 2px dashed var(--gold); outline-offset: 2px; background: rgba(255,194,61,.12); }
+.bar-rumour {
+  display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 9px 12px;
+  background: linear-gradient(90deg, rgba(255,75,58,.18), rgba(0,0,0,.25)); border: 2px solid rgba(255,75,58,.45); border-radius: 12px;
+}
+.bar-rumour:empty { display: none; }
+.bar-rumour .boss-face { font-size: 30px; line-height: 1; filter: drop-shadow(0 0 6px rgba(255,75,58,.6)); }
+.bar-rumour .rum-text { display: flex; flex-direction: column; line-height: 1.25; font-size: 12.5px; }
+.bar-rumour .rum-text b { color: #ffb3a8; font-weight: 700; font-size: 13px; }
+.bar-rumour .rum-text span { opacity: .85; }
+.bar-rumour.soon { border-color: #ff4b3a; box-shadow: 0 0 14px rgba(255,75,58,.4); animation: rumour-pulse 2s ease-in-out infinite; }
+@keyframes rumour-pulse { 50% { box-shadow: 0 0 22px rgba(255,75,58,.7); } }
+body.reduced-fx .bar-rumour.soon { animation: none; }
+.sheet-extra.hidden { display: none; }
+.lineup-label { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; opacity: .7; margin: 10px 0 6px; text-align: center; }
+.lineup.sm { display: flex; gap: 5px; justify-content: center; flex-wrap: nowrap; }
+.lineup.sm .rc-sm { width: 46px; flex: 0 0 46px; padding: 5px 2px; aspect-ratio: 3 / 4; }
+.lineup.sm .rc-sm .rc-face { font-size: 16px; }
+.lineup.sm .rc-sm .rc-name { font-size: 7.5px; }
+.rc.empty-slot { border: 2px dashed rgba(255,255,255,.2); background: rgba(255,255,255,.04); }
+
+.ht-stakes { display: flex; gap: 8px; justify-content: center; font-size: 28px; }
+.ht-stakes span { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; background: rgba(255,255,255,.08); border: 2px solid rgba(255,194,61,.5); }
+.ht-stakes span:first-child { border-color: var(--gold); box-shadow: 0 0 10px rgba(255,194,61,.5); }
+
+.whatsnew { list-style: none; margin: 4px 0 6px; padding: 0; text-align: left; display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; }
+.whatsnew li { font-size: 13px; line-height: 1.4; background: rgba(0,0,0,.25); border-radius: 10px; padding: 8px 10px; }
+.whatsnew li b { color: var(--gold); font-weight: 500; }

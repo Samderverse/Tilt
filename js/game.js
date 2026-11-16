@@ -6,6 +6,7 @@ import { BOSSES, BOSS_BY_ID } from './bosses.js';
 import { runHook, aliasesFor, extrasFor } from './regulars.js';
 import { openBar, hasSpecial } from './shop.js';
 import { MACHINE_BY_ID, machineOf, stripFor } from './machines.js';
+import { stakeMods } from './stakes.js';
 
 export const CONFIG = {
   spins: 6,
@@ -39,7 +40,7 @@ export function roundInfo(run, round = run.round) {
   const pint = Math.ceil(round / 3);
   const kind = ROUND_KINDS[(round - 1) % 3];
   const boss = kind.id === 'boss' ? BOSS_BY_ID[run.bossOrder[(pint - 1) % run.bossOrder.length]] : null;
-  const tf = machineOf(run).targetFactor || 1;
+  const tf = (machineOf(run).targetFactor || 1) * stakeMods(run).targetFactor;
   const target = Math.round((baseTarget(pint) * kind.factor * tf) / 5) * 5;
   const endless = pint > CONFIG.pintsToWin;
   return { round, pint, kind, boss, target, reward: kind.reward, endless,
@@ -54,7 +55,7 @@ function bossOrderFor(rng) {
   return [...t1.slice(0, 4), ...t2.slice(0, 4), ...rng.shuffle([...t1.slice(4), ...t2.slice(4)])];
 }
 
-export function newRun(seed, machineId = 'local') {
+export function newRun(seed, machineId = 'local', stake = 1) {
   const rng = makeRng(seed + '-run');
   const m = MACHINE_BY_ID[machineId] || MACHINE_BY_ID.local;
   const reels = makeReels(makeRng(seed + '-reels'), stripFor(m));
@@ -63,6 +64,7 @@ export function newRun(seed, machineId = 'local') {
     v: 3,
     seed,
     machine: m.id,
+    stake,
     endless: false,
     reels,
     bossOrder: bossOrderFor(rng),
@@ -97,7 +99,7 @@ export function startRound(run) {
   if (hasSpecial(run, 'shoes')) ex.nudges++;
   if (hasSpecial(run, 'happy')) ex.spins++;
   run.score = 0;
-  run.spinsLeft = Math.max(1, (boss?.spins ?? CONFIG.spins) + ex.spins + (m.spins || 0));
+  run.spinsLeft = Math.max(1, (boss?.spins ?? CONFIG.spins) + ex.spins + (m.spins || 0) - stakeMods(run).spinsMinus);
   run.holdsLeft = CONFIG.holds + ex.holds;
   run.nudgesLeft = boss?.nudges != null ? boss.nudges : CONFIG.nudges + ex.nudges;
   run.held = [false, false, false];
@@ -308,7 +310,7 @@ export function interestCap(run) {
 
 export function payout(run) {
   const info = roundInfo(run);
-  const spare = Math.min(CONFIG.spareCap, run.spinsLeft);
+  const spare = stakeMods(run).noSpare ? 0 : Math.min(CONFIG.spareCap, run.spinsLeft);
   const interest = Math.min(interestCap(run), Math.floor(run.money / CONFIG.interestPer));
   // Peek at Regulars' round-end money without changing their state.
   const copies = activeRegs(run, run.regulars.map((r) => ({ id: r.id, state: JSON.parse(JSON.stringify(r.state)) })));

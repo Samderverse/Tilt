@@ -10,6 +10,8 @@
 //   status(state)   -> short live text for the info sheet
 // An effect is { coins, mult, xmult, money, text } (any subset), or null.
 
+import { stakeMods } from './stakes.js';
+
 export const RARITY = {
   common:    { name: 'Common',    price: 5,  weight: 64, colour: '#8fd3ff' },
   uncommon:  { name: 'Uncommon',  price: 7,  weight: 28, colour: '#7dff6a' },
@@ -228,7 +230,7 @@ export const REG_BY_ID = Object.fromEntries(REGULARS.map((r) => [r.id, r]));
 
 export const MAX_REGULARS = 5;
 // The Lock-In special adds a 6th slot.
-export function maxRegulars(run) { return MAX_REGULARS + ((run.specials || []).includes('lockin') ? 1 : 0); }
+export function maxRegulars(run) { return Math.max(2, MAX_REGULARS - stakeMods(run).slotsMinus + ((run.specials || []).includes('lockin') ? 1 : 0)); }
 
 export function priceOf(id) { return RARITY[REG_BY_ID[id].rarity].price; }
 

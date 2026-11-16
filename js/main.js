@@ -15,6 +15,8 @@ import { MACHINES, MACHINE_BY_ID, machineOf } from './machines.js';
 import { setScenery, miniCabinet } from './scenery.js';
 import * as Drunk from './drunk.js';
 import { VERSION } from './version.js';
+import { CHANGELOG, LATEST } from './changelog.js';
+import { STAKES, STAKE_BY_ID, stakeOf, stakeMods, unlockedStake, bestStakeOn, recordWin } from './stakes.js';
 import { openAlbum, bindAlbum, seeRegular, ownRegular, faceBoss, beatBoss, lostToBoss } from './album.js';
 
 const SAVE_KEY = 'tilt.run.v3';
@@ -45,7 +47,7 @@ const el = {
   credits: $('credits-list'),
   bumpBtn: $('bump-btn'), bumpRisk: $('bump-risk'),
   albumBtn: $('album-btn'), settingsAlbum: $('settings-album'), speedSeg: $('speed-seg'), optShake: $('opt-shake'),
-  versionLine: $('version-line'), bugBtn: $('bug-btn'), machines: $('machines'), machineList: $('machine-list'), machinesCancel: $('machines-cancel'),
+  versionLine: $('version-line'), bugBtn: $('bug-btn'), whatsNew: $('settings-whatsnew'), sheetExtra: $('sheet-extra'), barRumour: $('bar-rumour'), stakeRow: $('stake-row'), stakeRule: $('stake-rule'), machines: $('machines'), machineList: $('machine-list'), machinesCancel: $('machines-cancel'),
   howtoBtn: $('howto-btn'), tutorialBtn: $('tutorial-btn'), settingsHowto: $('settings-howto'), optTips: $('opt-tips'),
   // Bar
   barNext: $('bar-next'), barMoney: $('bar-money'), barRegs: $('bar-regulars'), barRegCount: $('bar-reg-count'),
@@ -214,14 +216,14 @@ function renderHUD() {
 
   const pct = Math.min(100, (run.score / i.target) * 100);
   if (i.boss) {
-    el.targetLabel.textContent = 'Patience';
+    el.targetLabel.textContent = paceLabel(i, 'Patience');
     el.fill.style.width = (100 - pct) + '%';
     const left = Math.max(0, i.target - run.score);
     el.barText.textContent = left ? `Patience ${fmt(left)}` : 'SNAPPED';
     const pulse = run.spinsLeft <= 1 ? '.55s' : run.spinsLeft <= 2 ? '1s' : '2.4s';
     document.documentElement.style.setProperty('--pulse', pulse);
   } else {
-    el.targetLabel.textContent = 'Target';
+    el.targetLabel.textContent = paceLabel(i, 'Target');
     el.fill.style.width = pct + '%';
     el.barText.textContent = `${fmt(run.score)} / ${fmt(i.target)}`;
   }
@@ -234,7 +236,15 @@ function renderHUD() {
     el.bossName.textContent = i.boss.name;
     el.bossRule.textContent = i.boss.rule;
   }
-  el.seed.textContent = `Seed ${run.seed}`;
+  const st = stakeOf(run);
+  el.seed.textContent = st.id > 1 ? `${st.icon} ${st.name} stake · Seed ${run.seed}` : `Seed ${run.seed}`;
+}
+
+// "Need 900/spin" while you're short of the target and still have spins; the plain label otherwise.
+function paceLabel(i, plain) {
+  const left = i.target - run.score;
+  if (left <= 0 || run.spinsLeft <= 0 || run.spinsThisRound === 0) return plain;
+  return `Need ${fmt(Math.ceil(left / run.spinsLeft))}/spin`;
 }
 
 function regBadge(r) {
@@ -262,7 +272,59 @@ function renderRegulars(container, where) {
   }
   container.innerHTML = cards.join('');
   container.querySelectorAll('.reg-card[data-slot]').forEach((c) =>
-    c.addEventListener('click', () => openRegularSheet(Number(c.dataset.slot), where)));
+    c.addEventListener('click', () => { if (!dragMoved) openRegularSheet(Number(c.dataset.slot), where); }));
+  if (where === 'bar') bindDrag(container);
+}
+
+// Drag a Regular along the row to reorder (Bar only). A tap still opens the sheet.
+let dragMoved = false;
+function bindDrag(container) {
+  if (container.dataset.drag) return;
+  container.dataset.drag = '1';
+  let card = null, from = -1, x0 = 0, y0 = 0, dragging = false, cells = [], centres = [], to = -1;
+  const end = () => {
+    if (!card) return;
+    cells.forEach((c) => c.classList.remove('drop-target'));
+    card.classList.remove('dragging');
+    card.style.transform = '';
+    if (dragging && to >= 0 && to !== from) {
+      const [moved] = run.regulars.splice(from, 1);
+      run.regulars.splice(to, 0, moved);
+      A.sfx.nudge();
+      save();
+      renderBar();
+    }
+    card = null; dragging = false;
+    setTimeout(() => { dragMoved = false; }, 50);
+  };
+  container.addEventListener('pointerdown', (e) => {
+    const c = e.target.closest('.reg-card[data-slot]');
+    if (!c || run.regulars.length < 2) return;
+    card = c; from = Number(c.dataset.slot); x0 = e.clientX; y0 = e.clientY; dragging = false; to = -1;
+    cells = [...container.querySelectorAll('.reg-card')].slice(0, run.regulars.length);
+    centres = cells.map((c) => { const r = c.getBoundingClientRect(); return r.left + r.width / 2; });
+  });
+  container.addEventListener('pointermove', (e) => {
+    if (!card) return;
+    const dx = e.clientX - x0, dy = e.clientY - y0;
+    if (!dragging) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { card = null; return; } // vertical: let the page scroll
+      if (Math.abs(dx) < 8) return;
+      dragging = true; dragMoved = true;
+      card.classList.add('dragging');
+      try { container.setPointerCapture(e.pointerId); } catch {}
+    }
+    e.preventDefault();
+    card.style.transform = `translateX(${dx}px) scale(1.08)`;
+    let best = -1, bestD = Infinity;
+    centres.forEach((cx, i) => {
+      const d = Math.abs(e.clientX - cx);
+      if (d < bestD) { bestD = d; best = i; }
+    });
+    if (best !== to) { to = best; cells.forEach((c, i) => c.classList.toggle('drop-target', i === to && i !== from)); }
+  });
+  container.addEventListener('pointerup', end);
+  container.addEventListener('pointercancel', end);
 }
 
 function renderControls() {
@@ -272,7 +334,7 @@ function renderControls() {
     const hold = ctrl.querySelector('.hold-btn');
     hold.classList.toggle('on', run.held[i]);
     hold.disabled = !G.canHold(run, i);
-    hold.textContent = run.held[i] ? 'HELD' : run.lastHeld[i] && run.spinsThisRound > 0 ? 'COOL' : 'HOLD';
+    hold.textContent = run.held[i] ? 'HELD' : run.lastHeld[i] && run.spinsThisRound > 0 ? 'WAIT' : 'HOLD';
     ctrl.querySelectorAll('.nudge-btn').forEach((b) => (b.disabled = phase !== 'nudge' || !G.canNudge(run, i)));
     el.reels[i].classList.toggle('held', run.held[i]);
   });
@@ -868,7 +930,8 @@ function statsHTML() {
   const lineup = run.regulars.length
     ? `<div class="lineup">${run.regulars.map((r) => regularCard(r.id, 'sm')).join('')}</div>`
     : '<p class="muted">No Regulars this time.</p>';
-  return `<p class="summary-machine">${m.icon} ${m.name}${run.endless ? ' · Endless' : ''}</p>
+  const st = stakeOf(run);
+  return `<p class="summary-machine">${m.icon} ${m.name}${st.id > 1 ? ` · ${st.icon} ${st.name} stake` : ''}${run.endless ? ' · Endless' : ''}</p>
   ${lineup}
   <div class="stats">
     <div><b>${i.pint}</b>Pint reached</div>
@@ -897,7 +960,7 @@ async function shareRun() {
   const head = run.phase === 'won' ? '🏆 Beat the pub!' : run.endless ? `🍺 Endless, Pint ${i.pint}` : `💀 Tilted on Pint ${i.pint}`;
   const text = [
     `🎰 Tilt: ${head}`,
-    `${m.icon} ${m.name}`,
+    `${m.icon} ${m.name}${stakeOf(run).id > 1 ? ` · ${stakeOf(run).icon} ${stakeOf(run).name} stake` : ''}`,
     `👑 ${s.bossesBeaten} Landlords beaten · 💥 Best spin ${fmt(s.bestSpin)}`,
     `🧑‍🤝‍🧑 ${run.regulars.map((r) => REG_BY_ID[r.id].face).join(' ') || 'No Regulars'}`,
     `🎰 ${stripSummary()}`,
@@ -934,6 +997,7 @@ async function gameOver() {
 
 async function victory() {
   setBest(run.round);
+  const fresh = run.endless ? null : recordWin(run.machine, run.stake || 1);
   document.body.classList.remove('boss');
   A.setBossMode(false);
   FX.burst(innerWidth / 2, innerHeight / 2, 120, 'confetti', 2);
@@ -945,6 +1009,7 @@ async function victory() {
     kicker: 'Last orders',
     title: 'You beat the pub!',
     body: `<p>Every Landlord down. The machine is yours.</p>${statsHTML()}
+      ${fresh ? `<p class="unlock-note">🔓 <b>${fresh.icon} ${fresh.name} stake unlocked:</b> ${fresh.rule}</p>` : ''}
       <p class="endless-pitch"><b>Fancy another?</b> Keep everything you've got and go round the Landlords again, with targets that keep climbing.</p>`,
     btn: 'Keep drinking 🍺',
     alt: 'Call it a night',
@@ -995,9 +1060,30 @@ function itemCardHTML(item, idx, kind) {
   </button>`;
 }
 
+// Who you already have, shown under a Regular you're thinking of buying.
+function lineupHTML() {
+  const slots = maxRegulars(run);
+  const cards = run.regulars.map((r) => regularCard(r.id, 'sm', regBadge(r)));
+  for (let i = run.regulars.length; i < slots; i++) cards.push('<div class="rc rc-sm empty-slot"></div>');
+  return `<p class="lineup-label">Your machine · ${run.regulars.length} / ${slots}</p><div class="lineup sm">${cards.join('')}</div>`;
+}
+
+// The Landlord this Pint is building up to, kept in view while you shop.
+function renderRumour(nx) {
+  const bossRound = G.roundInfo(run, (nx.pint - 1) * 3 + 3);
+  const b = bossRound.boss;
+  if (!b) { el.barRumour.innerHTML = ''; return; }
+  const away = bossRound.round - nx.round;
+  const when = away === 0 ? 'Next round' : away === 1 ? 'In two rounds' : 'End of this Pint';
+  el.barRumour.innerHTML = `<span class="boss-face">${b.face}</span>
+    <span class="rum-text"><b>${when}: ${b.name}</b><span>${b.rule}</span></span>`;
+  el.barRumour.classList.toggle('soon', away === 0);
+}
+
 function renderBar() {
   const nx = info();
   el.barNext.textContent = nx.boss ? `Next: the Landlord (${nx.boss.name})` : `Next: ${nx.kind.name}, target ${nx.target}`;
+  renderRumour(nx);
   renderMoney();
   S.refreshPrices(run);
   renderRegulars(el.barRegs, 'bar');
@@ -1021,7 +1107,9 @@ function renderBar() {
     : `<p class="hint">No Beer Mats or Specials yet. Beer Mats level up a symbol.</p>`;
 }
 
-function openSheet({ face = '', art = '', faceText = false, tag, tagColour, name, desc, status = '', actions }) {
+function openSheet({ face = '', art = '', faceText = false, tag, tagColour, name, desc, status = '', extra = '', actions }) {
+  el.sheetExtra.innerHTML = extra;
+  el.sheetExtra.classList.toggle('hidden', !extra);
   if (art) el.sheetFace.innerHTML = art; else el.sheetFace.textContent = face;
   el.sheetFace.classList.toggle('art', !!art);
   el.sheetFace.classList.toggle('text', faceText);
@@ -1099,9 +1187,10 @@ function openItemSheet(kind, idx) {
   if (item.type === 'mat') status = status || `${SYMBOLS[item.id].name} is level ${(run.levels[item.id] || 0) + 1} now. Each level makes the next Mat £1 dearer.`;
   if (item.type === 'special') status = status || 'Permanent for the rest of the run.';
   if (item.type === 'packet' && item.id === 'prawn' && run.regulars.length >= maxRegulars(run)) status = status || 'Your machine is full: whoever you pick swaps in for one of your Regulars (sold at their usual price).';
+  const extra = item.type === 'regular' ? lineupHTML() : '';
   openSheet({
     art: itemArt(item, 'lg'),
-    tag: inf.tag, tagColour: inf.colour, name: inf.name, desc: inf.desc, status,
+    tag: inf.tag, tagColour: inf.colour, name: inf.name, desc: inf.desc, status, extra,
     actions: [
       { label: 'Not now', onClick: closeSheet },
       { label: `Buy £${item.price}`, cls: 'big-btn', disabled: !!reason, onClick: () => { closeSheet(); buyItem(kind, idx); } },
@@ -1330,18 +1419,45 @@ const BLANK_LINES = [
 function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
 
 // ---------- New runs & the machine picker ----------
+const STAKE_PICK_KEY = 'tilt.stakepick.v1';
 function chooseMachine() {
   const open = unlockedMachines();
-  if (open.length <= 1) return Promise.resolve('local');
+  const maxStake = unlockedStake();
+  if (open.length <= 1 && maxStake <= 1) return Promise.resolve({ machine: 'local', stake: 1 });
   return new Promise((resolve) => {
     const best = getBest();
+    let stake = 1;
+    try { stake = Math.min(maxStake, Number(localStorage.getItem(STAKE_PICK_KEY)) || 1); } catch {}
+    const renderStakes = () => {
+      el.stakeRow.innerHTML = STAKES.map((s) => {
+        const locked = s.id > maxStake;
+        return `<button class="stake-chip${s.id === stake ? ' on' : ''}${locked ? ' locked' : ''}" data-stake="${s.id}" ${locked ? 'disabled' : ''} aria-label="${s.name} stake">${locked ? '🔒' : s.icon}</button>`;
+      }).join('');
+      const s = STAKE_BY_ID[stake];
+      const rules = stakeMods({ stake }).rules;
+      el.stakeRule.innerHTML = `<b>${s.icon} ${s.name}</b> · ${rules.length ? rules.join(' ') : s.rule}${stake < STAKES.length && stake === maxStake ? ` <span class="muted">Beat the pub to unlock ${STAKE_BY_ID[stake + 1].name}.</span>` : ''}`;
+      el.machineList.querySelectorAll('.machine-card').forEach((card) => {
+        const b = bestStakeOn(card.dataset.id);
+        const tag = card.querySelector('.mc-best');
+        if (tag) tag.textContent = b >= stake ? `✓ Beaten on ${STAKE_BY_ID[b].name}` : b ? `Beaten on ${STAKE_BY_ID[b].name}` : '';
+      });
+    };
     el.machineList.innerHTML = MACHINES.map((m) => {
       const locked = m.unlock > best;
       return `<button class="machine-card${locked ? ' locked' : ''}" data-id="${m.id}" ${locked ? 'disabled' : ''}>
         ${miniCabinet(m, locked)}
-        <span class="mc-text"><b>${locked ? '🔒 ' : m.icon + ' '}${m.name}</b><span>${locked ? m.unlockText : m.desc}</span></span></button>`;
+        <span class="mc-text"><b>${locked ? '🔒 ' : m.icon + ' '}${m.name}</b><span>${locked ? m.unlockText : m.desc}</span><span class="mc-best"></span></span></button>`;
     }).join('');
-    const done = (id) => { el.machines.classList.add('hidden'); resolve(id); };
+    renderStakes();
+    el.stakeRow.onclick = (e) => {
+      const b = e.target.closest('.stake-chip:not(.locked)');
+      if (!b) return;
+      stake = Number(b.dataset.stake);
+      try { localStorage.setItem(STAKE_PICK_KEY, String(stake)); } catch {}
+      A.sfx.tick();
+      renderStakes();
+    };
+    const done = (id) => { el.machines.classList.add('hidden'); resolve(id ? { machine: id, stake } : null); };
     el.machineList.querySelectorAll('.machine-card:not(.locked)').forEach((b) => b.addEventListener('click', () => { A.sfx.coin(); done(b.dataset.id); }));
     el.machinesCancel.onclick = () => done(null);
     el.machines.classList.remove('hidden');
@@ -1369,14 +1485,14 @@ async function firstTimeOffer() {
 
 async function newRunFlow(fromEnd = false) {
   if (!fromEnd && await firstTimeOffer()) return;
-  const id = await chooseMachine();
-  if (!id) {
+  const pick = await chooseMachine();
+  if (!pick) {
     if (fromEnd) showScreen('title');
     return;
   }
   A.playMusic('main');
   clearSave();
-  startRun(G.newRun(randomSeed(), id));
+  startRun(G.newRun(randomSeed(), pick.machine, pick.stake));
 }
 
 // ---------- Settings ----------
@@ -1458,7 +1574,7 @@ function bindSettings() {
     const lines = [
       `Tilt v${VERSION} bug report`,
       run ? `Run: seed ${run.seed}, ${machineOf(run).name}, Pint ${i.pint} round ${i.round}${run.endless ? ' (endless)' : ''}${i.boss ? ', Landlord ' + i.boss.name : ''}` : 'Run: none',
-      run ? `Phase ${run.phase}, spins left ${run.spinsLeft}, score ${run.score}/${i.target}, £${run.money}` : '',
+      run ? `Stake ${run.stake || 1}, phase ${run.phase}, spins left ${run.spinsLeft}, score ${run.score}/${i.target}, £${run.money}` : '',
       run ? `Regulars: ${run.regulars.map((r) => r.id).join(', ') || 'none'}; Specials: ${(run.specials || []).join(', ') || 'none'}` : '',
       `Settings: speed ${settings.speed}x, reduced ${settings.reducedFx}, drunk ${settings.drunkFx}`,
       `Screen ${innerWidth}×${innerHeight}, ${navigator.userAgent}`,
@@ -1467,6 +1583,7 @@ function bindSettings() {
     try { await navigator.clipboard.writeText(lines); toast('Copied. Paste it in the group chat and say what happened.', 3000); }
     catch { toast('Couldn\'t copy. Take a screenshot of this instead: ' + lines.split('\n')[1], 5000); }
   });
+  el.whatsNew.addEventListener('click', () => { closeSettings(); showWhatsNew(LATEST); });
   el.abandon.addEventListener('click', () => {
     if (!confirm('Abandon this run? It can\'t be undone.')) return;
     clearSave();
@@ -1479,6 +1596,32 @@ function bindSettings() {
   });
   el.credits.innerHTML = CREDITS.map((c) => `<li><b>${c.what}:</b> ${c.who}</li>`).join('') +
     '<li><b>Game:</b> Tilt by Samderverse</li>';
+}
+
+// ---------- What's new ----------
+const SEEN_KEY = 'tilt.seen.v1';
+function whatsNewHTML(entry) {
+  return `<ul class="whatsnew">${entry.notes.map((n) => `<li>${n}</li>`).join('')}</ul>`;
+}
+async function showWhatsNew(entry = LATEST) {
+  await showOverlay({
+    face: '📰', kicker: `Tilt v${entry.version}`, title: `What's new: ${entry.title}`,
+    body: whatsNewHTML(entry), btn: 'Cheers',
+  });
+}
+// Shown once per version. Brand-new players (nothing seen yet) just get the current version marked as seen.
+function whatsNewOnce() {
+  let seen = null, playedBefore = false;
+  try {
+    seen = localStorage.getItem(SEEN_KEY);
+    // Players updating from before this feature existed have no "seen" mark, but do have a best score or a run.
+    playedBefore = !!(localStorage.getItem(BEST_KEY) || localStorage.getItem(SAVE_KEY) || localStorage.getItem('tilt.album.v1'));
+    localStorage.setItem(SEEN_KEY, VERSION);
+  } catch {}
+  if (seen === VERSION) return;
+  if (!seen && !playedBefore) return;
+  if (!CHANGELOG.some((c) => c.version === VERSION)) return;
+  showWhatsNew(LATEST);
 }
 
 // ---------- Updates & offline ----------
@@ -1517,6 +1660,7 @@ function boot() {
   const params = new URLSearchParams(location.search);
   const forcedSeed = params.get('seed');
   refreshTitle();
+  if (!location.search) whatsNewOnce();
 
   // Test shortcuts: ?round=3, ?boss=uncle, ?money=50, ?regs=penny,jen, ?bar=1 (open the Bar first)
   const debugRun = () => {

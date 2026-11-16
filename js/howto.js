@@ -42,6 +42,11 @@ export const PAGES = [
     body: 'Rounds come in <b>Pints</b> of three. The third is a <b>Landlord</b> with a nasty rule. You\'ll hear who\'s coming before you get there. Beat 8 Landlords to win, then keep going in <b>Endless</b> if you dare. Every Pint makes the pub a little wobblier…',
   },
   {
+    title: 'Stakes',
+    art: `<div class="ht-stakes"><span>🍋</span><span>🍺</span><span>🍂</span><span>🏅</span><span>💪</span><span>🚢</span></div>`,
+    body: 'Beaten the pub? Pick a higher <b>stake</b> next time. Each one adds a permanent rule on top of the last: no pay for spare spins, dearer Bar, fewer Regular slots, bigger targets, fewer spins. Beat the pub on a stake to unlock the next.',
+  },
+  {
     title: 'The Bar',
     art: `<div class="ht-shop">${regularCard('kev', 'sm')}${beerMat('cherry')}${scratchCard('gold')}${crispPacket('prawn')}</div>`,
     body: 'Between rounds, spend your winnings. <b>Regulars</b> boost every spin (left to right, so order matters). <b>Beer Mats</b> level up symbols. <b>Scratchcards</b> edit your reels (gold symbols even glow in a power cut). <b>Crisps</b> let you pick 1 of a few.',
