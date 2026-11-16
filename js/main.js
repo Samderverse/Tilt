@@ -244,7 +244,9 @@ function renderHUD() {
 function paceLabel(i, plain) {
   const left = i.target - run.score;
   if (left <= 0 || run.spinsLeft <= 0 || run.spinsThisRound === 0) return plain;
-  return `Need ${fmt(Math.ceil(left / run.spinsLeft))}/spin`;
+  const n = Math.ceil(left / run.spinsLeft);
+  const short = n >= 1e6 ? fmt(n) : n >= 10000 ? Math.round(n / 1000) + 'K' : fmt(n);
+  return `Need ${short}/spin`;
 }
 
 function regBadge(r) {
