@@ -163,6 +163,7 @@ const bossCard = (b) => {
   if (b.jammed != null) mods.push(`reel ${b.jammed + 1} jammed`);
   if (b.barFirst) mods.push('bar visit first');
   if (b.multFactor) mods.push(`multi ×${b.multFactor}`);
+  if (b.endless?.mods?.lines) mods.push(`Endless: lines ${b.endless.mods.lines.join(', ')}`);
   return `
   <article class="card boss t${b.tier}" data-search="${esc((b.name + ' ' + b.rule + ' ' + b.id).toLowerCase())}" data-tier="${b.tier}">
     <div class="boss-head"><span class="boss-face">${b.face}</span>
@@ -500,13 +501,13 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:30px 16px}
          ['Endless growth', '×' + G.CONFIG.endlessGrowth + ' per Pint'],
          ['Bump risk', `${G.CONFIG.bumpRisk * 100}%, +${G.CONFIG.bumpRiskStep * 100}% each bump`],
          ['Reel strip', `${S.MIN_STRIP}–${S.MAX_STRIP} symbols`],
-         ['Landlord pools', '8 early, 8 late']]
+         ['Landlord pools', '8 early, 8 late'], ['Cash Out', 'Endless only, from £100']]
         .map(([k, v]) => `<div class="kv"><span>${k}</span><b>${v}</b></div>`).join('')}
     </div>
     <div class="box">
       <h3>Regulars by rarity</h3>
       ${byRarity.map((r) => `<div class="kv"><span style="color:${RARITY[r.k].colour}">${RARITY[r.k].name}</span><b>${r.n} · ${money(RARITY[r.k].price)} · weight ${RARITY[r.k].weight}</b></div>`).join('')}
-      <p class="muted" style="font-size:12px;margin:8px 0 0">Legendaries have weight 0: they only come out of Prawn Cocktail crisps.</p>
+      <p class="muted" style="font-size:12px;margin:8px 0 0">Rarity is rolled by tier, then a Regular within it. Bar stock: Common 64% · Uncommon 28% · Rare 8%. Prawn Cocktail: Uncommon 60% · Rare 32% · Legendary 8%.</p>
     </div>
     <div class="box">
       <h3>Win lines</h3>

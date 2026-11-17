@@ -39,7 +39,11 @@ export function baseTarget(pint) {
 export function roundInfo(run, round = run.round) {
   const pint = Math.ceil(round / 3);
   const kind = ROUND_KINDS[(round - 1) % 3];
-  const boss = kind.id === 'boss' ? BOSS_BY_ID[run.bossOrder[(pint - 1) % run.bossOrder.length]] : null;
+  const base = kind.id === 'boss' ? BOSS_BY_ID[run.bossOrder[(pint - 1) % run.bossOrder.length]] : null;
+  // Some Landlords behave differently in Endless (pint > 8): merge their endless overrides in.
+  const boss = base && base.endless && pint > CONFIG.pintsToWin
+    ? { ...base, ...base.endless, mods: { ...base.mods, ...base.endless.mods } }
+    : base;
   const tf = (machineOf(run).targetFactor || 1) * stakeMods(run).targetFactor;
   const target = Math.round((baseTarget(pint) * kind.factor * tf) / 5) * 5;
   const endless = pint > CONFIG.pintsToWin;

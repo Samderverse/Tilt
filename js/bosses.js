@@ -7,6 +7,11 @@ export const BOSSES = [
     id: 'bouncer', tier: 1, name: 'The Bouncer', face: '😠',
     rule: 'Diagonals aren\'t getting in tonight. Straight lines only.',
     mods: { lines: ['top', 'middle', 'bottom'] },
+    // In Endless, builds lean on per-line Regulars, so losing two lines cuts far more than Coins. He lets one in.
+    endless: {
+      rule: 'He\'s letting one diagonal in tonight, and that\'s your lot. Straight lines and the down diagonal only.',
+      mods: { lines: ['top', 'middle', 'bottom', 'diag-down'] },
+    },
   },
   {
     id: 'inspector', tier: 1, name: 'Health Inspector', face: '🧐',

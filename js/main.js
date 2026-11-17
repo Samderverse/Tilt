@@ -47,7 +47,7 @@ const el = {
   credits: $('credits-list'),
   bumpBtn: $('bump-btn'), bumpRisk: $('bump-risk'),
   albumBtn: $('album-btn'), settingsAlbum: $('settings-album'), speedSeg: $('speed-seg'), optShake: $('opt-shake'),
-  versionLine: $('version-line'), bugBtn: $('bug-btn'), whatsNew: $('settings-whatsnew'), sheetExtra: $('sheet-extra'), barRumour: $('bar-rumour'), stakeRow: $('stake-row'), stakeRule: $('stake-rule'), machines: $('machines'), machineList: $('machine-list'), machinesCancel: $('machines-cancel'),
+  versionLine: $('version-line'), bugBtn: $('bug-btn'), cashout: $('cashout-btn'), whatsNew: $('settings-whatsnew'), sheetExtra: $('sheet-extra'), barRumour: $('bar-rumour'), stakeRow: $('stake-row'), stakeRule: $('stake-rule'), machines: $('machines'), machineList: $('machine-list'), machinesCancel: $('machines-cancel'),
   howtoBtn: $('howto-btn'), tutorialBtn: $('tutorial-btn'), settingsHowto: $('settings-howto'), optTips: $('opt-tips'),
   // Bar
   barNext: $('bar-next'), barMoney: $('bar-money'), barRegs: $('bar-regulars'), barRegCount: $('bar-reg-count'),
@@ -100,6 +100,11 @@ function setBest(roundsCleared) {
   if (fresh.length) setTimeout(() => toast(`🔓 New machine unlocked: ${fresh.map((m) => m.icon + ' ' + m.name).join(', ')}`, 3500), 600);
 }
 function bestText() {
+  const base = bestRoundsText();
+  const c = (() => { try { return JSON.parse(localStorage.getItem('tilt.cashout.v1')); } catch { return null; } })();
+  return c ? `${base}${base ? ' · ' : ''}Best cash-out £${c.money}` : base;
+}
+function bestRoundsText() {
   const b = getBest();
   if (!b) return '';
   if (b >= G.CONFIG.pintsToWin * 3) {
@@ -199,6 +204,53 @@ function applyDark(reveal = false) {
 function renderMoney() {
   el.money.textContent = `£${run.money}`;
   el.barMoney.textContent = `£${run.money}`;
+  const canCash = run.endless && run.money >= CASHOUT_MIN;
+  el.cashout.classList.toggle('hidden', !canCash);
+  if (canCash) el.cashout.innerHTML = `💷 <b>Cash out £${run.money}</b><span>End the run and bank your pot</span>`;
+}
+
+// ---------- Cash out (Endless only, from £100) ----------
+const CASHOUT_MIN = 100;
+const CASHOUT_KEY = 'tilt.cashout.v1';
+function bestCashout() {
+  try { return JSON.parse(localStorage.getItem(CASHOUT_KEY)) || null; } catch { return null; }
+}
+async function askCashOut() {
+  if (busy || !run.endless || run.money < CASHOUT_MIN) return;
+  A.sfx.tick();
+  const prev = bestCashout();
+  const choice = await showOverlay({
+    face: '💷', kicker: `Endless · Pint ${info().pint}`, title: `Cash out £${run.money}?`,
+    body: `<p>The run ends here and your pot goes in the record books.${prev ? ` Your best so far is <b>£${prev.money}</b>.` : ''}</p>`,
+    btn: 'Cash out', alt: 'Keep drinking',
+  });
+  if (choice === 'alt') return;
+  cashOut();
+}
+async function cashOut() {
+  busy = true;
+  const pot = run.money;
+  const prev = bestCashout();
+  const record = !prev || pot > prev.money;
+  if (record) {
+    try { localStorage.setItem(CASHOUT_KEY, JSON.stringify({ money: pot, pint: info().pint, machine: run.machine, stake: run.stake || 1 })); } catch {}
+  }
+  run.cashedOut = pot;
+  setBest(run.round - 1);
+  clearSave();
+  A.sfx.chaching();
+  A.sfx.jackpot();
+  FX.burst(innerWidth / 2, innerHeight / 2, 120, 'confetti', 2);
+  FX.flash('#7dff6a', 700);
+  await showOverlay({
+    face: '💷', kicker: `Endless · Pint ${info().pint}`, title: `Cashed out: £${pot}`,
+    body: `<p>${record ? (prev ? `New best cash-out! Your old record was £${prev.money}.` : 'Your first cash-out. Beat it next time.') : `Your best is still £${prev.money}.`}</p>${statsHTML()}`,
+    btn: 'Play again',
+    foot: SHARE_FOOT,
+  });
+  busy = false;
+  showScreen('title');
+  newRunFlow(true);
 }
 
 function renderHUD() {
@@ -959,7 +1011,7 @@ async function shareRun() {
   const s = run.stats;
   const m = machineOf(run);
   const i = info();
-  const head = run.phase === 'won' ? '🏆 Beat the pub!' : run.endless ? `🍺 Endless, Pint ${i.pint}` : `💀 Tilted on Pint ${i.pint}`;
+  const head = run.cashedOut ? `💷 Cashed out £${run.cashedOut} on Pint ${i.pint}` : run.phase === 'won' ? '🏆 Beat the pub!' : run.endless ? `🍺 Endless, Pint ${i.pint}` : `💀 Tilted on Pint ${i.pint}`;
   const text = [
     `🎰 Tilt: ${head}`,
     `${m.icon} ${m.name}${stakeOf(run).id > 1 ? ` · ${stakeOf(run).icon} ${stakeOf(run).name} stake` : ''}`,
@@ -1084,7 +1136,7 @@ function renderRumour(nx) {
 
 function renderBar() {
   const nx = info();
-  el.barNext.textContent = nx.boss ? `Next: the Landlord (${nx.boss.name})` : `Next: ${nx.kind.name}, target ${nx.target}`;
+  el.barNext.textContent = nx.boss ? `Next: the Landlord (${nx.boss.name})` : `Next: ${nx.kind.name}, target ${fmt(nx.target)}`;
   renderRumour(nx);
   renderMoney();
   S.refreshPrices(run);
@@ -1766,6 +1818,7 @@ function boot() {
     renderBar();
   });
   el.leaveBar.addEventListener('click', () => { A.unlock(); leaveBar(); });
+  el.cashout.addEventListener('click', () => { A.unlock(); askCashOut(); });
   el.sheet.addEventListener('click', (e) => { if (e.target === el.sheet) closeSheet(); });
 
   // Desktop testing: Space spins/collects, 1-3 hold, Q/A W/S E/D nudge.

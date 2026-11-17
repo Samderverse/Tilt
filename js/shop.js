@@ -38,7 +38,7 @@ export const SCRATCH_BY_ID = Object.fromEntries(SCRATCHCARDS.map((s) => [s.id, s
 export const PACKETS = [
   { id: 'ready', name: 'Ready Salted', icon: '🥔', desc: 'Pick 1 of 3 Beer Mats.', colour: '#e94545', price: 4 },
   { id: 'vinegar', name: 'Salt & Vinegar', icon: '🧂', desc: 'Pick 1 of 3 Scratchcards.', colour: '#3d9bff', price: 5 },
-  { id: 'prawn', name: 'Prawn Cocktail', icon: '🦐', desc: 'Pick 1 of 2 Regulars. Might be a legend.', colour: '#ff6ad5', price: 7 },
+  { id: 'prawn', name: 'Prawn Cocktail', icon: '🦐', desc: 'Pick 1 of 2 Regulars, Uncommon or better. Might be a legend.', colour: '#ff6ad5', price: 7 },
 ];
 export const PACKET_BY_ID = Object.fromEntries(PACKETS.map((p) => [p.id, p]));
 
@@ -63,17 +63,24 @@ function specialFor(run, pint) {
 }
 
 // ---------- Stock ----------
-function rollRegular(rng, run, exclude = [], legendaryChance = 0) {
+// Rarity is rolled first, by tier, then a Regular within that tier. (Before v2.1 the weights were applied
+// per Regular, so the 16 Commons swamped the 6 Rares: Rares turned up 3% of the time instead of 8%.)
+const BAR_ODDS = { common: 64, uncommon: 28, rare: 8 };
+const PRAWN_ODDS = { uncommon: 60, rare: 32, legendary: 8 };
+// If a tier has nobody left to offer, fall to the next tier down, then up.
+const FALLBACK = { legendary: ['rare', 'uncommon', 'common'], rare: ['uncommon', 'legendary', 'common'], uncommon: ['common', 'rare', 'legendary'], common: ['uncommon', 'rare', 'legendary'] };
+
+function rollRegular(rng, run, exclude = [], odds = BAR_ODDS) {
   const owned = new Set([...run.regulars.map((r) => r.id), ...exclude]);
-  if (legendaryChance && rng.next() < legendaryChance) {
-    const leg = REGULARS.filter((r) => r.rarity === 'legendary' && !owned.has(r.id));
-    if (leg.length) return rng.pick(leg).id;
+  const avail = (tier) => REGULARS.filter((r) => r.rarity === tier && !owned.has(r.id));
+  const total = Object.values(odds).reduce((a, b) => a + b, 0);
+  let x = rng.next() * total, tier = Object.keys(odds)[0];
+  for (const [t, w] of Object.entries(odds)) { x -= w; if (x <= 0) { tier = t; break; } }
+  for (const t of [tier, ...FALLBACK[tier]]) {
+    const pool = avail(t);
+    if (pool.length) return rng.pick(pool).id;
   }
-  const pool = REGULARS.filter((r) => RARITY[r.rarity].weight > 0 && !owned.has(r.id));
-  const total = pool.reduce((s, r) => s + RARITY[r.rarity].weight, 0);
-  let x = rng.next() * total;
-  for (const r of pool) { x -= RARITY[r.rarity].weight; if (x <= 0) return r.id; }
-  return pool[0]?.id;
+  return null;
 }
 
 function stockItems(run, rng) {
@@ -153,8 +160,8 @@ export function buy(run, kind, index) {
 function packetChoices(run, id, rng) {
   if (id === 'ready') return rng.shuffle(BASE_SYMBOLS).slice(0, 3).map((s) => ({ type: 'mat', id: s }));
   if (id === 'vinegar') return rng.shuffle(SCRATCHCARDS.map((s) => s.id)).slice(0, 3).map((s) => ({ type: 'scratch', id: s }));
-  const a = rollRegular(rng, run, [], 0.06);
-  const b = rollRegular(rng, run, [a], 0.06);
+  const a = rollRegular(rng, run, [], PRAWN_ODDS);
+  const b = rollRegular(rng, run, [a], PRAWN_ODDS);
   return [a, b].filter(Boolean).map((r) => ({ type: 'regular', id: r }));
 }
 

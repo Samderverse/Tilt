@@ -3,6 +3,16 @@
 
 export const CHANGELOG = [
   {
+    version: '2.1.0',
+    title: 'Better crisps & Cash Out',
+    notes: [
+      '🦐 <b>Fixed the Regular odds.</b> Rares were turning up 3% of the time instead of 8%, in the Bar and in crisps. Thanks Luke for spotting it!',
+      '🦐 Prawn Cocktail is now proper premium: no Commons, a good chance of a Rare, and a shot at a Legendary.',
+      '😠 In Endless, the Bouncer lets one diagonal in, so he no longer guts builds that rely on winning lines.',
+      '💷 <b>Cash Out.</b> In Endless, hold £100 and you can bank your pot from the Bar. Your best cash-out goes on the title screen.',
+    ],
+  },
+  {
     version: '2.0.0',
     title: 'Stakes',
     notes: [

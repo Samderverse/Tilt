@@ -14,6 +14,7 @@ A chaotic pub fruit machine roguelike by Samderverse. Spin, hold, nudge and surv
 - **Bump**: after a spin, jolt every reel up or down at random. Free, but each bump raises the round's **tilt** risk (10%, 30%, 50%...). Tilt and that spin scores nothing. Can also shake the phone (Settings).
 - Earn £ each round: round reward + £1 per spare spin (max £3) + interest (£1 per £5 held, max £3).
 - Beat Pint 8's Landlord to win the run, then keep everything and carry on in **Endless** mode (targets grow ×1.75 per Pint).
+- **Cash Out** (Endless only): once you're holding £100, a button in the Bar ends the run and banks your pot. Best cash-out shows on the title screen (`tilt.cashout.v1`).
 
 ## Stakes
 Difficulty tiers, picked in the machine picker. Each keeps every rule below it; beat the pub on a stake to unlock the next.
@@ -38,10 +39,10 @@ Prices scale with power:
 
 | Item | Price |
 |---|---|
-| Regulars | £5 Common, £7 Uncommon, £10 Rare (Legendaries only from Prawn Cocktail) |
+| Regulars | £5 Common, £7 Uncommon, £10 Rare (Legendaries only from Prawn Cocktail). Rarity is rolled by tier: Common 64%, Uncommon 28%, Rare 8% |
 | Beer Mats | £3, +£1 for each level that symbol already has |
 | Scratchcards | Bin Bag £2, Lucky Dip £2, Photocopier £3, Gold Leaf £4, Wild Card £5 |
-| Crisps | Ready Salted £4 (1 of 3 Beer Mats), Salt & Vinegar £5 (1 of 3 Scratchcards), Prawn Cocktail £7 (1 of 2 Regulars) |
+| Crisps | Ready Salted £4 (1 of 3 Beer Mats), Salt & Vinegar £5 (1 of 3 Scratchcards), Prawn Cocktail £7 (1 of 2 Regulars: Uncommon 60%, Rare 32%, Legendary 8%) |
 | Restock | £2, then +£1 each time per visit |
 
 - **Regulars** (up to 5): Tilt's jokers. They trigger left to right, so order matters. Tap one for details or to sell; drag it along the row to reorder.
@@ -79,6 +80,7 @@ Open the GitHub Pages link, then:
 
 ## Landlords
 16 in total. Each run gets 4 from the early pool for Pints 1–4 and 4 from the late pool for Pints 5–8; endless brings in the rest.
+- The Bouncer lets the down diagonal in during Endless (4 lines), since late builds lean on per-line Regulars.
 - Early: The Bouncer, Health Inspector, Last Orders, The Quiz Master, Sticky Floors, Bolted Down, Running a Tab, Jammed Reel
 - Late: Power Cut, The Taxman, Drunk Uncle, Half Measures, Darts Night, Smoke Machine, Members Only, Watered Down
 
@@ -191,3 +193,4 @@ game loads it, and `tools/` can be deleted before uploading if you'd rather not 
 - v1.9: drunk effects ✅
 - v1.10: Regular swap from crisps, Long-Haul Luke, SKIP, bug report, Album records, 11 new sounds ✅
 - v2.0: Stakes, Landlord in the Bar, drag to reorder, line-up in shop cards, pace hint, What's new ✅
+- v2.1: Regular odds fix, premium Prawn Cocktail, Endless Bouncer, Cash Out ✅
