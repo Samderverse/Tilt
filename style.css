@@ -1741,3 +1741,40 @@ body[data-drunk="4"] :is(.tilly-title, .bar-tilly .tilly, .tilly-aside-img) { fi
 body.reduced-fx :is(.tilly-title, .bar-tilly .tilly, .tilly-aside-img, .tilly-bubble), body.reduced-fx .tilly-pop.show { animation: none !important; }
 body.reduced-fx .tilly-pop.show { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) { :is(.tilly-title, .bar-tilly .tilly, .tilly-aside-img) { animation: none !important; } }
+
+/* ---------- v2.3.1: Tilly comes to life ---------- */
+/* Never show the bubble before Tilly; letters not yet typed keep their space so nothing jumps */
+.tilly-waiting .tilly-bubble, .tilly-waiting .tilly-says { visibility: hidden; }
+.tilly-bubble .untyped, .tilly-says .untyped { visibility: hidden; }
+.tilly-aside .tilly-says { animation: tilly-bubble .35s .12s cubic-bezier(.2,1.4,.4,1) backwards; }
+
+.tilly-title, .bar-tilly .tilly, .tilly-aside-img { transform-origin: 50% 100%; }
+/* Idle: a slow breath */
+.tilly-title, .bar-tilly .tilly { animation: tilly-breathe 3.4s ease-in-out infinite; }
+/* Entrances, by expression, then back to breathing */
+.tx-in.tx-smug, .tx-in.tx-talk, .tx-in.tx-blink { animation: tilly-in .55s cubic-bezier(.2,1.5,.4,1), tilly-breathe 3.4s .55s ease-in-out infinite; }
+.tx-in.tx-point { animation: tilly-in .55s cubic-bezier(.2,1.5,.4,1), tilly-lean 2.6s .55s ease-in-out infinite; }
+.tx-in.tx-jackpot { animation: tilly-jump .9s ease-out, tilly-breathe 3.4s .9s ease-in-out infinite; }
+.tx-in.tx-nervous { animation: tilly-in .5s cubic-bezier(.2,1.5,.4,1), tilly-shiver .09s .5s linear 14, tilly-breathe 3.4s 1.8s ease-in-out infinite; }
+.tx-in.tx-defeated { animation: tilly-slump .9s ease-out forwards; }
+.tx-in.tx-tilt { animation: tilly-spin .8s cubic-bezier(.2,1.3,.4,1), tilly-shiver .07s .8s linear 10; }
+
+@keyframes tilly-breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.012, 1.03); } }
+@keyframes tilly-in { 0% { transform: scale(.4, .2); opacity: 0; } 55% { transform: scale(.92, 1.12); opacity: 1; } 80% { transform: scale(1.06, .95); } 100% { transform: scale(1); } }
+@keyframes tilly-lean { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(3deg) translateX(2px); } }
+@keyframes tilly-jump {
+  0% { transform: scale(.5, .3); opacity: 0; } 20% { transform: translateY(-16%) scale(.9, 1.12); opacity: 1; }
+  40% { transform: translateY(0) scale(1.1, .9); } 60% { transform: translateY(-8%) scale(.96, 1.05); }
+  80% { transform: translateY(0) scale(1.04, .97); } 100% { transform: none; }
+}
+@keyframes tilly-shiver { 0% { transform: translateX(0); } 25% { transform: translateX(-1.5px) rotate(-.6deg); } 75% { transform: translateX(1.5px) rotate(.6deg); } 100% { transform: translateX(0); } }
+@keyframes tilly-slump { 0% { transform: scale(.4, .2); opacity: 0; } 40% { transform: scale(1); opacity: 1; } 100% { transform: translateY(3%) scale(1.04, .94) rotate(-3deg); } }
+@keyframes tilly-spin { 0% { transform: scale(.3) rotate(-160deg); opacity: 0; } 60% { transform: scale(1.12) rotate(14deg); opacity: 1; } 80% { transform: rotate(-8deg); } 100% { transform: rotate(0); } }
+
+/* Heads on the message line bob in */
+.message .msg-tilly { transform-origin: 50% 100%; animation: tilly-head-in .4s cubic-bezier(.2,1.5,.4,1); }
+.coach-bubble.pop .coach-face { animation: tilly-head-in .45s .1s cubic-bezier(.2,1.5,.4,1) backwards; transform-origin: 50% 100%; }
+@keyframes tilly-head-in { 0% { transform: scale(.3, .2); opacity: 0; } 60% { transform: scale(.95, 1.12); opacity: 1; } 100% { transform: scale(1); } }
+
+body.reduced-fx :is(.tilly-title, .bar-tilly .tilly, .tilly-aside-img, .msg-tilly, .coach-face, .tilly-says) { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { :is(.tilly-title, .bar-tilly .tilly, .tilly-aside-img, .msg-tilly, .coach-face) { animation: none !important; } }

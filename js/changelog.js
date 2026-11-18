@@ -3,6 +3,15 @@
 
 export const CHANGELOG = [
   {
+    version: '2.3.1',
+    title: 'Tilly comes to life',
+    notes: [
+      '💬 Tilly now talks: lines type out with a little mouth flap and a quiet blip.',
+      '🕺 Tilly bounces in, breathes, jumps for joy, shivers at Landlords, slumps when you lose and spins out on a TILT.',
+      '⚡ Tilly, the sounds and the art now load instantly from your phone after the first visit, and the speech bubble always waits for Tilly.',
+    ],
+  },
+  {
     version: '2.3.0',
     title: 'Meet Tilly',
     notes: [

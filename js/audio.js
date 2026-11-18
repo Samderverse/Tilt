@@ -290,6 +290,8 @@ function role(roleId, fallback, opts = {}) {
 }
 
 export const sfx = {
+  // Tilly talking: a tiny, quiet, slightly random blip per few letters.
+  blip: () => tone(560 + Math.random() * 160, 0.035, 'triangle', 0.022, 0, 480 + Math.random() * 80),
   spin() {
     role('lever', null);
     if (spinSrc) { try { spinSrc.stop(); } catch {} }

@@ -172,17 +172,21 @@ function setBarTilly(expr, text) {
   const im = document.getElementById('bar-tilly-img');
   im.src = Tilly.src(expr);
   im.dataset.expr = expr;
-  const ln = document.getElementById('bar-tilly-line');
-  ln.textContent = Drunk.slur(text);
-  ln.classList.remove('pop'); void ln.offsetWidth; ln.classList.add('pop');
+  Tilly.animate(im, expr);
+  Tilly.speak(document.getElementById('bar-tilly-line'), Drunk.slur(text), im, expr);
 }
 // Purchases and the like: only when Tilly's chat is on Full.
 function barSay(pool, expr = 'smug') {
   if (Tilly.chatty()) setBarTilly(expr, Tilly.line(pool));
 }
 function titleTilly() {
-  document.getElementById('title-tilly').classList.toggle('hidden', !Tilly.present());
-  document.getElementById('title-tilly-line').textContent = Tilly.line('title');
+  const box = document.getElementById('title-tilly');
+  box.classList.toggle('hidden', !Tilly.present());
+  if (!Tilly.present()) return;
+  const im = document.getElementById('title-tilly-img');
+  im.src = Tilly.src('smug');
+  Tilly.animate(im, 'smug');
+  Tilly.speak(document.getElementById('title-tilly-line'), Tilly.line('title'), im, 'smug');
 }
 // Idle blink on the title screen and in the Bar (Smug only: it's the frame the blink was drawn for).
 function blinkLoop() {
@@ -191,7 +195,7 @@ function blinkLoop() {
     if (!document.hidden) {
       for (const id of ['title-tilly-img', 'bar-tilly-img']) {
         const im = document.getElementById(id);
-        if (!im || !im.offsetParent) continue;
+        if (!im || !im.offsetParent || im.dataset.talking) continue;
         if (id === 'bar-tilly-img' && im.dataset.expr !== 'smug') continue;
         im.src = Tilly.src('blink');
         setTimeout(() => { im.src = Tilly.src(id === 'title-tilly-img' ? 'smug' : im.dataset.expr || 'smug'); }, 150);
@@ -980,6 +984,7 @@ function showOverlay({ face = null, kicker = '', title, body, btn, slam = false,
     void el.panel.offsetWidth;
     if (slam) el.panel.classList.add('slam');
     el.overlay.classList.remove('hidden');
+    Tilly.liven(el.oBody);
     A.setMuffled(true);
     el.oBtn.onclick = () => { A.unlock(); finish('main'); };
   });
@@ -1686,6 +1691,7 @@ function applySettings() {
   FX.setReduced(settings.reducedFx);
   Drunk.setReduced(settings.reducedFx);
   Drunk.setMode(settings.drunkFx || 'full');
+  Tilly.setInstant(settings.reducedFx);
 }
 
 function openSettings() {
@@ -1909,6 +1915,8 @@ function boot() {
   bindAlbum();
   bindBets();
   Tilly.setMode(settings.tilly);
+  Tilly.setBlip(() => A.sfx.blip());
+  Tilly.setInstant(settings.reducedFx);
   Tilly.preload();
   titleTilly();
   blinkLoop();

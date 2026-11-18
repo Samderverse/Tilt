@@ -2,7 +2,7 @@
 // reacts to the big moments and takes over the tutorial tips from the Barman.
 // Presentation only: nothing here touches scoring, randomness or the run.
 
-export const EXPRESSIONS = ['smug', 'blink', 'point', 'nervous', 'tilt', 'defeated', 'jackpot'];
+export const EXPRESSIONS = ['smug', 'blink', 'talk', 'point', 'nervous', 'tilt', 'defeated', 'jackpot'];
 const SRC = (e) => `img/tilly/${e}.webp`;
 const HEAD = (e) => `img/tilly/head-${e}.webp`;
 
@@ -13,9 +13,78 @@ export const getMode = () => mode;
 export const chatty = () => mode === 'full';
 export const present = () => mode !== 'off';
 
-// Warm the browser cache so the first reaction isn't a blank square.
+// Load and unpack every sprite up front, and keep them in memory, so a reaction never appears as an empty gap.
+const kept = [];
 export function preload() {
-  for (const e of EXPRESSIONS) { new Image().src = SRC(e); new Image().src = HEAD(e); }
+  for (const e of EXPRESSIONS) {
+    for (const url of [SRC(e), HEAD(e)]) {
+      const im = new Image();
+      im.src = url;
+      if (im.decode) im.decode().catch(() => {});
+      kept.push(im);
+    }
+  }
+}
+
+// ---------- Speaking ----------
+// Text types out with a soft blip, and Smug flaps between its grin and closed-mouth frame while it does.
+let blip = () => {};
+let instant = false;
+export const setBlip = (fn) => { blip = fn || (() => {}); };
+export const setInstant = (on) => { instant = !!on; };
+const escT = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// Wait for an <img> to be ready (or give up after a moment) so the bubble never beats Tilly on screen.
+function whenLoaded(im) {
+  if (!im || (im.complete && im.naturalWidth)) return Promise.resolve();
+  return new Promise((res) => {
+    const done = () => { im.removeEventListener('load', done); im.removeEventListener('error', done); res(); };
+    im.addEventListener('load', done); im.addEventListener('error', done);
+    setTimeout(done, 1500);
+  });
+}
+
+// Replay a CSS entrance/expression animation on an element.
+export function animate(el, expr) {
+  if (!el) return;
+  el.classList.remove('tx-in', ...EXPRESSIONS.map((e) => `tx-${e}`));
+  void el.offsetWidth;
+  el.classList.add('tx-in', `tx-${expr}`);
+}
+
+const typing = new WeakMap();
+// bubble: the speech element. im: Tilly's <img> (optional). Returns when the line has finished.
+export async function speak(bubble, text, im = null, expr = 'smug') {
+  if (!bubble) return;
+  const prev = typing.get(bubble);
+  if (prev) prev.cancel = true;
+  const job = { cancel: false };
+  typing.set(bubble, job);
+  const box = bubble.parentElement;
+  box?.classList.add('tilly-waiting');
+  bubble.innerHTML = `<span class="typed"></span><span class="untyped">${escT(text)}</span>`;
+  await whenLoaded(im);
+  if (job.cancel) return;
+  box?.classList.remove('tilly-waiting');
+  bubble.classList.remove('pop'); void bubble.offsetWidth; bubble.classList.add('pop');
+  const typed = bubble.querySelector('.typed'), untyped = bubble.querySelector('.untyped');
+  if (instant || !text) { typed.textContent = text; untyped.textContent = ''; return; }
+  const talks = im && expr === 'smug';
+  if (im) im.dataset.talking = '1';
+  await new Promise((r) => setTimeout(r, 180)); // let the bubble pop first
+  let i = 0, frame = 0;
+  while (i < text.length && !job.cancel) {
+    const step = /[.,!?…]/.test(text[i]) ? 1 : 2;
+    i = Math.min(text.length, i + step);
+    typed.textContent = text.slice(0, i);
+    untyped.textContent = text.slice(i);
+    if (/[a-z0-9]/i.test(text[i - 1]) && i % 4 < 2) blip();
+    if (talks) im.src = SRC(++frame % 2 ? 'talk' : 'smug');
+    await new Promise((r) => setTimeout(r, /[.!?…]/.test(text[i - 1]) ? 160 : 45));
+  }
+  if (im) { delete im.dataset.talking; if (talks) im.src = SRC('smug'); }
+  if (job.cancel) return;
+  typed.textContent = text; untyped.textContent = '';
 }
 
 export const img = (expr, cls = '') => `<img class="tilly ${cls}" src="${SRC(expr)}" alt="Tilly" draggable="false">`;
@@ -26,7 +95,18 @@ export const headSrc = HEAD;
 // "Tilly says…" box used inside overlays.
 export function aside(expr, line) {
   if (!present() || !line) return '';
-  return `<div class="tilly-aside">${img(expr, 'tilly-aside-img')}<p class="tilly-says">${line}</p></div>`;
+  return `<div class="tilly-aside tilly-waiting" data-expr="${expr}">${img(expr, 'tilly-aside-img')}<p class="tilly-says" data-line="${escT(line)}">${escT(line)}</p></div>`;
+}
+
+// Bring any asides inside an element to life: Tilly bounces in, then the line types out.
+export function liven(root) {
+  if (!root) return;
+  root.querySelectorAll('.tilly-aside').forEach((a) => {
+    const im = a.querySelector('img'), b = a.querySelector('.tilly-says');
+    const expr = a.dataset.expr || 'smug';
+    animate(im, expr);
+    speak(b, b.dataset.line || b.textContent, im, expr);
+  });
 }
 
 // ---------- Lines ----------

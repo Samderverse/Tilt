@@ -122,6 +122,9 @@ smug, blink, point, nervous, tilt, defeated, jackpot, plus head crops for the me
 - **The Bar**: Tilly in the corner reacting to purchases, sells, restocks and being skint; nervous when a Landlord is next.
 - **Tutorial**: Tilly replaces the Barman as the voice of the tips and the first-time offer.
 - **Drunk**: rosier from Merry, sways from Tipsy, goes wonky from Hammered, double vision when Seeing double. Off with Reduced effects.
+- **Talking**: lines type out with a soft blip; Smug flaps between its grin and a closed-mouth frame (`talk`).
+  Entrances and idles by expression (bounce, breathe, jump, shiver, slump, spin). Text is instant with Reduced effects.
+- Images and sounds are served cache-first by `sw.js` (refreshed with each release's cache name), so Tilly appears instantly.
 - Settings → **Tilly's chat**: Full / Quiet (big moments only) / Off. All dialogue lives in `js/tilly.js`.
 
 ## Bar Bets
@@ -218,4 +221,4 @@ game loads it, and `tools/` can be deleted before uploading if you'd rather not 
 - v2.0: Stakes, Landlord in the Bar, drag to reorder, line-up in shop cards, pace hint, What's new ✅
 - v2.1: Regular odds fix, premium Prawn Cocktail, Endless Bouncer, Cash Out ✅
 - v2.2: Bar Bets, cosmetic rewards, Records, wild cap, Bouncer back to full strength ✅
-- v2.3: Tilly the mascot ✅
+- v2.3: Tilly the mascot ✅ (2.3.1: talking, animations, instant loading)
