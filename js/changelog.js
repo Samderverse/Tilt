@@ -3,6 +3,28 @@
 
 export const CHANGELOG = [
   {
+    version: '2.3.0',
+    title: 'Meet Tilly',
+    notes: [
+      '🍺 <b>Meet Tilly</b>, your host for the evening. A smug pint with questionable morals who\'s been propping up this bar for twenty years.',
+      '😬 Tilly reacts to the big moments: Landlords walking in, TILTs, big spins, wins and losses. And gets drunker as the night goes on.',
+      '🛒 Tilly hangs out in the Bar too, with opinions on everything you buy.',
+      '🎓 Tilly takes over the tutorial tips from the Barman.',
+      '🔇 Too chatty? <b>Settings → Tilly\'s chat</b>: Full, Quiet (big moments only) or Off.',
+    ],
+  },
+  {
+    version: '2.2.0',
+    title: 'Bar Bets',
+    notes: [
+      '🍻 <b>Bar Bets.</b> 35 bets with the Regulars, from "land nine Cherries" to "beat the pub without nudging". Find them on the title screen. Thanks Luke for the idea!',
+      '🎁 Every 5 bets won unlocks a cosmetic for your machine: brass trim, foil Regulars, a neon sign, golden reels and more.',
+      '📊 A Records page: runs played, pubs beaten, best spin, deepest Pint, best cash-out and your best stake on each machine.',
+      '⭐ Wilds are capped at <b>3 per reel</b> and now worth 10 Coins, so all-star reels aren\'t the only way to win any more.',
+      '😠 The Bouncer is back to blocking both diagonals in Endless. Draw him and it\'s just bad luck!',
+    ],
+  },
+  {
     version: '2.1.0',
     title: 'Better crisps & Cash Out',
     notes: [

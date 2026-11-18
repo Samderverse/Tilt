@@ -4,6 +4,7 @@ import { SYMBOLS, BASE_SYMBOLS, baseId, isGold } from './symbols.js';
 import { REGULARS, REG_BY_ID, RARITY, maxRegulars, priceOf, sellValue } from './regulars.js';
 import { machineOf } from './machines.js';
 import { stakeMods } from './stakes.js';
+import { mark } from './bets.js';
 
 // Machine discounts (Student Union, Working Men's Club).
 export function cost(run, base, isRegular = false) {
@@ -29,7 +30,7 @@ export const SCRATCHCARDS = [
   { id: 'gold', name: 'Gold Leaf', icon: '✨', desc: 'Gild a symbol on a reel. Gold symbols score double Coins, and glow through a Power Cut when everything else goes dark.', target: true, price: 4 },
   { id: 'copy', name: 'Photocopier', icon: '📠', desc: 'Copy a symbol on a reel, so it turns up more often.', target: true, price: 3 },
   { id: 'bin', name: 'Bin Bag', icon: '🗑️', desc: 'Throw a symbol off a reel to thin out the junk.', target: true, price: 2 },
-  { id: 'wild', name: 'Wild Card', icon: '⭐', desc: 'Turn a symbol on a reel into a Wild. Wilds match anything.', target: true, price: 5 },
+  { id: 'wild', name: 'Wild Card', icon: '⭐', desc: 'Turn a symbol on a reel into a Wild. Wilds match anything. Max 3 per reel.', target: true, price: 5 },
   { id: 'dip', name: 'Lucky Dip', icon: '🎲', desc: 'Something random happens to your reels. Or you find a fiver.', target: false, price: 2 },
 ];
 export const SCRATCH_BY_ID = Object.fromEntries(SCRATCHCARDS.map((s) => [s.id, s]));
@@ -136,6 +137,7 @@ export function buy(run, kind, index) {
   if (!item || item.sold) return { ok: false, reason: 'Sold out' };
   if (run.money < item.price) return { ok: false, reason: 'Not enough money' };
   if (item.type === 'regular' && run.regulars.length >= maxRegulars(run)) return { ok: false, reason: 'No room at the machine. Sell a Regular first.' };
+  if (item.type === 'scratch' && !hasTarget(run, item.id)) return { ok: false, reason: item.id === 'wild' ? `Every reel already has ${MAX_WILDS} Wilds.` : 'Nowhere to use it right now.' };
 
   run.money -= item.price;
   item.sold = true;
@@ -187,16 +189,19 @@ export function swapFromPacket(run, choiceIndex, slot) {
   const v = sellValue(old);
   run.money += v;
   run.regulars[slot] = { id: c.id, state: {} };
+  mark(run, 'regular');
   run.bar.pending = null;
   return { ok: true, sold: old.id, value: v };
 }
 
 export function addRegular(run, id) {
   run.regulars.push({ id, state: {} });
+  mark(run, 'regular');
 }
 
 export function levelUp(run, id) {
   run.levels[id] = (run.levels[id] || 0) + 1;
+  mark(run, 'mat');
 }
 
 // ---------- Scratchcards ----------
@@ -207,14 +212,24 @@ function useScratch(run, id) {
 }
 
 // Can this scratchcard be applied to reel r, entry i?
+// At most this many Wilds per reel. Before v2.2 there was no cap and all-Wild reels beat every other build.
+export const MAX_WILDS = 3;
+export const wildsOn = (strip) => strip.filter((e) => baseId(e) === 'wild').length;
+
 export function canTarget(run, id, r, i) {
   const strip = run.reels[r];
   const e = strip[i];
   if (id === 'gold') return !isGold(e) && baseId(e) !== 'wild';
-  if (id === 'copy') return strip.length < MAX_STRIP;
+  if (id === 'copy') return strip.length < MAX_STRIP && !(baseId(e) === 'wild' && wildsOn(strip) >= MAX_WILDS);
   if (id === 'bin') return strip.length > MIN_STRIP;
-  if (id === 'wild') return baseId(e) !== 'wild';
+  if (id === 'wild') return baseId(e) !== 'wild' && wildsOn(strip) < MAX_WILDS;
   return false;
+}
+
+// Is there anywhere this scratchcard could go?
+export function hasTarget(run, id) {
+  if (!SCRATCH_BY_ID[id]?.target) return true;
+  return run.reels.some((strip, r) => strip.some((_, i) => canTarget(run, id, r, i)));
 }
 
 export function applyScratch(run, id, r, i) {

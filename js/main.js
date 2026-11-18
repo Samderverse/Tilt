@@ -17,7 +17,10 @@ import * as Drunk from './drunk.js';
 import { VERSION } from './version.js';
 import { CHANGELOG, LATEST } from './changelog.js';
 import { STAKES, STAKE_BY_ID, stakeOf, stakeMods, unlockedStake, bestStakeOn, recordWin } from './stakes.js';
-import { openAlbum, bindAlbum, seeRegular, ownRegular, faceBoss, beatBoss, lostToBoss } from './album.js';
+import { openAlbum, bindAlbum, seeRegular, ownRegular, faceBoss, beatBoss, lostToBoss, albumData } from './album.js';
+import * as Bets from './bets.js';
+import * as Tilly from './tilly.js';
+import { openBets, bindBets, applyCosmetics } from './betsboard.js';
 
 const SAVE_KEY = 'tilt.run.v3';
 const BEST_KEY = 'tilt.best.v2';
@@ -135,16 +138,104 @@ const fmtMult = (m) => (Number.isInteger(m) ? String(m) : m.toFixed(1));
 
 function bump(node) { node.classList.remove('bump'); void node.offsetWidth; node.classList.add('bump'); }
 
-function say(text, big = false) {
-  el.message.textContent = big ? text : Drunk.slur(text);
+const escHTML = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// expr: show Tilly's head beside the text (only when Tilly's chat is on Full).
+function say(text, big = false, expr = null) {
+  const t = big ? text : Drunk.slur(text);
+  if (expr && Tilly.chatty()) {
+    el.message.innerHTML = `${Tilly.head(expr, 'msg-tilly')}<span>${escHTML(t)}</span>`;
+    el.message.classList.add('with-tilly');
+  } else {
+    el.message.textContent = t;
+    el.message.classList.remove('with-tilly');
+  }
   el.message.classList.toggle('big', big);
   if (big) bump(el.message);
+}
+
+// ---------- Tilly ----------
+let popTimer = null;
+function tillyPop(expr, ms = 1400) {
+  if (!Tilly.present()) return;
+  const p = document.getElementById('tilly-pop');
+  p.src = Tilly.src(expr);
+  p.classList.remove('hidden', 'show');
+  void p.offsetWidth;
+  p.classList.add('show');
+  clearTimeout(popTimer);
+  popTimer = setTimeout(() => p.classList.add('hidden'), ms);
+}
+function setBarTilly(expr, text) {
+  const box = document.getElementById('bar-tilly');
+  box.classList.toggle('hidden', !Tilly.present());
+  if (!Tilly.present()) return;
+  const im = document.getElementById('bar-tilly-img');
+  im.src = Tilly.src(expr);
+  im.dataset.expr = expr;
+  const ln = document.getElementById('bar-tilly-line');
+  ln.textContent = Drunk.slur(text);
+  ln.classList.remove('pop'); void ln.offsetWidth; ln.classList.add('pop');
+}
+// Purchases and the like: only when Tilly's chat is on Full.
+function barSay(pool, expr = 'smug') {
+  if (Tilly.chatty()) setBarTilly(expr, Tilly.line(pool));
+}
+function titleTilly() {
+  document.getElementById('title-tilly').classList.toggle('hidden', !Tilly.present());
+  document.getElementById('title-tilly-line').textContent = Tilly.line('title');
+}
+// Idle blink on the title screen and in the Bar (Smug only: it's the frame the blink was drawn for).
+function blinkLoop() {
+  const next = 2600 + Math.random() * 3600;
+  setTimeout(() => {
+    if (!document.hidden) {
+      for (const id of ['title-tilly-img', 'bar-tilly-img']) {
+        const im = document.getElementById(id);
+        if (!im || !im.offsetParent) continue;
+        if (id === 'bar-tilly-img' && im.dataset.expr !== 'smug') continue;
+        im.src = Tilly.src('blink');
+        setTimeout(() => { im.src = Tilly.src(id === 'title-tilly-img' ? 'smug' : im.dataset.expr || 'smug'); }, 150);
+      }
+    }
+    blinkLoop();
+  }, next);
 }
 
 function setCalc(coins, mult, preview = false) {
   el.coins.textContent = fmt(coins);
   el.mult.textContent = typeof mult === 'number' ? (mult >= 1e5 ? fmt(mult) : fmtMult(mult)) : mult;
   el.calc.classList.toggle('preview', preview);
+}
+
+// ---------- Bar Bets ----------
+const betQueue = [];
+let betShowing = false;
+function showNextBet() {
+  if (betShowing || !betQueue.length) return;
+  betShowing = true;
+  const { html, reward } = betQueue.shift();
+  let b = document.querySelector('.bet-toast');
+  if (!b) { b = document.createElement('div'); b.className = 'bet-toast'; document.body.appendChild(b); }
+  b.innerHTML = html;
+  b.classList.toggle('reward', !!reward);
+  b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
+  if (reward) A.sfx.jackpot(); else A.sfx.cheers();
+  A.buzz([20, 40, 20]);
+  setTimeout(() => { b.classList.remove('show'); setTimeout(() => { betShowing = false; showNextBet(); }, 350); }, reward ? 3400 : 2600);
+}
+function betEvent(type, ev) {
+  const res = Bets.check(type, ev);
+  for (const b of res.bets) betQueue.push({ html: `<span class="bt-icon">${b.icon}</span><span><small>🍻 Bet won</small><b>${b.name}</b></span>` });
+  for (const r of res.rewards) betQueue.push({ reward: true, html: `<span class="bt-icon">${r.icon}</span><span><small>🎁 Reward unlocked</small><b>${r.name}</b></span>` });
+  if (res.rewards.length) applyCosmetics();
+  showNextBet();
+}
+const rarityOf = (id) => REG_BY_ID[id]?.rarity;
+const ownedCount = () => Object.values(albumData().regs || {}).filter((v) => v >= 2).length;
+function barBets() {
+  const p = info().pint;
+  Bets.best('bestPint', p);
+  betEvent('bar', { run, pint: p, rarityOf, owned: ownedCount() });
 }
 
 function toast(text, ms = 2200) {
@@ -236,6 +327,8 @@ async function cashOut() {
     try { localStorage.setItem(CASHOUT_KEY, JSON.stringify({ money: pot, pint: info().pint, machine: run.machine, stake: run.stake || 1 })); } catch {}
   }
   run.cashedOut = pot;
+  Bets.bump('cashouts');
+  betEvent('cashout', { run, pot });
   setBest(run.round - 1);
   clearSave();
   A.sfx.chaching();
@@ -244,7 +337,7 @@ async function cashOut() {
   FX.flash('#7dff6a', 700);
   await showOverlay({
     face: '💷', kicker: `Endless · Pint ${info().pint}`, title: `Cashed out: £${pot}`,
-    body: `<p>${record ? (prev ? `New best cash-out! Your old record was £${prev.money}.` : 'Your first cash-out. Beat it next time.') : `Your best is still £${prev.money}.`}</p>${statsHTML()}`,
+    body: `<p>${record ? (prev ? `New best cash-out! Your old record was £${prev.money}.` : 'Your first cash-out. Beat it next time.') : `Your best is still £${prev.money}.`}</p>${Tilly.aside('jackpot', Tilly.line('cashOut'))}${statsHTML()}`,
     btn: 'Play again',
     foot: SHARE_FOOT,
   });
@@ -457,6 +550,7 @@ function setAppHeight() {
 
 // Title buttons: "Continue" only when there's a run worth continuing.
 function refreshTitle() {
+  titleTilly();
   const saved = load();
   const canContinue = !!saved && !location.search;
   el.start.textContent = canContinue ? 'Continue' : 'Tap to Play';
@@ -573,6 +667,7 @@ function onHold(i) {
 
 async function onNudge(i, dir) {
   if (busy || run.phase !== 'nudge') return;
+  const before = isDarkBoss() ? -1 : G.preview(run).total;
   if (!G.nudge(run, i, dir)) { A.sfx.denied(); return; }
   busy = true;
   renderControls();
@@ -583,7 +678,8 @@ async function onNudge(i, dir) {
   await animateNudge(i, dir);
   busy = false;
   save();
-  showPreview();
+  const after = isDarkBoss() ? -1 : G.preview(run).total;
+  showPreview(before === 0 && after > 0 && Math.random() < 0.6 ? { line: Tilly.line('nudgeWin'), expr: 'smug' } : null);
   if (run.nudgesLeft <= 0 && !G.canBump(run)) {
     renderControls();
     await sleep(250);
@@ -596,8 +692,11 @@ async function onNudge(i, dir) {
 // ---------- Bump ----------
 async function onBump() {
   if (busy || run.phase !== 'nudge') return;
+  const risky = G.tiltChance(run) >= 0.3;
   const res = G.bump(run);
   if (!res) { A.sfx.denied(); return; }
+  if (res.tilted) Bets.bump('tilts');
+  if (risky && !res.tilted && Tilly.chatty()) say(Tilly.line('riskyBump'), false, 'nervous');
   busy = true;
   renderControls();
   A.sfx.bump();
@@ -607,7 +706,9 @@ async function onBump() {
     FX.glitch(el.machine, 800);
     FX.flash('#ff2a2a', 500);
     A.sfx.tilt();
-    say(`TILT! The machine locks up. This spin scores nothing.`);
+    if (Tilly.present()) say(`${Tilly.line('tilt')} This spin scores nothing.`, false, 'tilt');
+    else say(`TILT! The machine locks up. This spin scores nothing.`);
+    tillyPop('tilt', 1500 / speed());
     await FX.stamp('TILT!', '#ff4b3a', 1300 / speed());
     busy = false;
     save();
@@ -620,11 +721,11 @@ async function onBump() {
   save();
   renderHUD();
   renderRegulars(el.regs, 'game');
-  showPreview();
+  showPreview(risky ? { line: Tilly.line('bumpSaved'), expr: 'smug' } : null);
   renderControls();
 }
 
-function showPreview() {
+function showPreview(tilly = null) {
   const opts = [];
   if (run.nudgesLeft > 0) opts.push(run.nudgesLeft === 1 ? 'Nudge (1 left)' : `Nudge (${run.nudgesLeft} left)`);
   if (G.canBump(run)) opts.push('BUMP');
@@ -636,6 +737,7 @@ function showPreview() {
   }
   const p = G.preview(run);
   setCalc(p.coins, p.mult, true);
+  if (tilly && Tilly.chatty() && p.total) { say(`${tilly.line} Showing +${fmt(p.total)}.`, false, tilly.expr); return; }
   say(p.total ? `Showing +${fmt(p.total)}. ${how}` : `Nothing yet. ${how}`);
 }
 
@@ -685,10 +787,15 @@ async function doCollect() {
   skipping = false;
   animating = true;
   renderControls();
+  const tiltedSpin = run.tilted;
+  const landedGrid = G.grid(run);
   const result = G.collect(run);
   await playResult(result);
   animating = false;
   skipping = false;
+  Bets.bump('spins');
+  Bets.best('bestSpin', result.total);
+  betEvent('spin', { run, grid: tiltedSpin ? null : landedGrid, total: result.total });
   renderRegulars(el.regs, 'game');
   save();
 
@@ -755,7 +862,7 @@ async function playResult(result) {
   if (!result.wins.length) {
     // Regulars can still react to a losing spin (Quentin banks Multi).
     for (const st of result.steps) { if (st.kind === 'reg') popRegular(st.slot, st.effect); A.sfx.tick(); await sleep(450); }
-    if (!result.voided) { A.sfx.blank(); say(pick(BLANK_LINES)); }
+    if (!result.voided) { A.sfx.blank(); say(Tilly.line('blank'), false, 'defeated'); }
     return;
   }
 
@@ -805,8 +912,9 @@ async function playResult(result) {
   el.paylines.forEach((p) => p.classList.remove('on'));
 
   const total = result.total;
-  say(`+${fmt(total)}`, true);
   const big = result.mult >= 8 || result.wins.length >= 3 || total >= i.target * 0.5;
+  say(`+${fmt(total)}`, true, big ? 'jackpot' : null);
+  if (result.onFire && Tilly.canChat()) setTimeout(() => { if (!busy || animating) say(Tilly.line('bigSpin'), false, 'jackpot'); }, 1400 / speed());
 
   if (result.onFire) {
     el.bar.classList.add('on-fire');
@@ -898,7 +1006,8 @@ async function roundIntro() {
       kicker: `Pint ${i.pint}${i.endless ? ' · Endless' : ''} · The Landlord`,
       title: i.boss.name,
       body: `<p class="rule-box">${i.boss.rule}</p>
-             <p>Wear down <b>${fmt(i.target)}</b> patience in <b>${run.spinsLeft}</b> spins.</p>`,
+             <p>Wear down <b>${fmt(i.target)}</b> patience in <b>${run.spinsLeft}</b> spins.</p>
+             ${Tilly.aside('nervous', Drunk.slur(Tilly.bossLine(i.boss.id)))}`,
       btn: 'Bring it on',
       slam: true,
     });
@@ -912,19 +1021,21 @@ async function roundIntro() {
     await showOverlay({
       kicker: i.endless ? `Pint ${i.pint} · Endless` : `Pint ${i.pint} · Round ${i.round}`,
       title: i.kind.name,
-      body: `<p>Score <b>${fmt(i.target)}</b> in <b>${run.spinsLeft}</b> spins.</p>${tip}`,
+      body: `<p>Score <b>${fmt(i.target)}</b> in <b>${run.spinsLeft}</b> spins.</p>${tip}${i.round === 1 ? Tilly.aside('smug', Tilly.line('runStart')) : ''}`,
       btn: i.round === 1 ? 'Insert coin' : 'Spin up',
       foot: `<div class="rumour"><span class="boss-face">${b.face}</span>
         <span>Word at the bar: the Landlord at the end of this Pint (${when}) is <b>${b.name}</b>. ${b.rule}</span></div>`,
     });
   }
   busy = false;
-  say('Press SPIN');
+  if (i.round > 1 && !i.boss && Math.random() < 0.4 && Tilly.canChat()) say(Tilly.line('leaveBar'), false, 'smug');
+  else say('Press SPIN');
   renderControls();
   // Getting drunker: announce each new stage once per run.
   const st = Drunk.stage();
   if (st > (run.drunkShown || 0)) {
     run.drunkShown = st;
+    if (Tilly.canChat(true)) say(Tilly.line('stage', st), false, 'smug');
     save();
     toast(['', '🍺 Feeling merry…', '🍻 Getting tipsy…', '🥴 Absolutely hammered!', '😵‍💫 Seeing double!'][st] || '', 2600);
     await tip('drunk', null, `Three pints in and the pub's starting to wobble. The more you drink, the wobblier it gets, but it always <b>settles while you're nudging</b>. Prefer a steady screen? <b>Settings → Drunk effects</b>.`);
@@ -947,11 +1058,16 @@ async function bossDefeated() {
   A.buzz([60, 40, 60, 40, 200]);
   el.bar.classList.remove('on-fire');
   beatBoss(info().boss.id);
+  tillyPop('jackpot', 1700 / speed());
   await FX.stamp('LANDLORD BEATEN', 'var(--gold)', 1500 / speed());
 }
 
 async function roundCleared() {
   const i = info();
+  Bets.bump('rounds');
+  if (i.boss) Bets.bump('landlords');
+  betEvent('clear', { run, info: i, wins: albumData().wins, losses: albumData().losses });
+  if (Bets.isOn('champagne')) FX.burst(innerWidth / 2, innerHeight * 0.3, 90, 'coin', 1.7);
   A.sfx.clear();
   const pay = G.payout(run);
   setBest(run.round);
@@ -966,7 +1082,7 @@ async function roundCleared() {
         <tr><td>Interest (£1 per £5, max £${G.interestCap(run)})</td><td>£${pay.interest}</td></tr>
         ${regRows}
         <tr class="total"><td>Total</td><td>£${pay.total}</td></tr>
-      </table>`,
+      </table>${Tilly.aside('jackpot', Drunk.slur(Tilly.line(i.boss ? 'bossBeaten' : 'cleared')))}`,
     btn: i.isFinal ? 'Last orders' : 'To the Bar',
   });
   A.sfx.cash();
@@ -1018,6 +1134,7 @@ async function shareRun() {
     `👑 ${s.bossesBeaten} Landlords beaten · 💥 Best spin ${fmt(s.bestSpin)}`,
     `🧑‍🤝‍🧑 ${run.regulars.map((r) => REG_BY_ID[r.id].face).join(' ') || 'No Regulars'}`,
     `🎰 ${stripSummary()}`,
+    ...(Bets.isOn('crown') ? [`🍻 ${Bets.wonCount()}/${Bets.BETS.length} Bar Bets`] : []),
     location.origin + location.pathname,
   ].join('\n');
   try {
@@ -1035,13 +1152,14 @@ async function gameOver() {
   setBest(run.round - 1);
   clearSave();
   const i = info();
+  Bets.best('bestPint', i.pint);
   if (i.boss) lostToBoss(i.boss.id);
   await showOverlay({
     face: i.boss ? i.boss.face : null,
     kicker: i.boss ? `${i.boss.name} wins` : (i.endless ? `Endless · Pint ${i.pint}` : `Round ${i.round}`),
     title: 'TILT!',
     titleClass: 'tilt-title glitch',
-    body: `<p>${fmt(run.score)} / ${fmt(i.target)}. The machine takes your last coin.</p>${statsHTML()}`,
+    body: `<p>${fmt(run.score)} / ${fmt(i.target)}. The machine takes your last coin.</p>${Tilly.aside('defeated', Tilly.line('failed'))}${statsHTML()}`,
     btn: 'Play again',
     foot: SHARE_FOOT,
   });
@@ -1052,6 +1170,8 @@ async function gameOver() {
 async function victory() {
   setBest(run.round);
   const fresh = run.endless ? null : recordWin(run.machine, run.stake || 1);
+  Bets.bump('pubs');
+  betEvent('pub', { run });
   document.body.classList.remove('boss');
   A.setBossMode(false);
   FX.burst(innerWidth / 2, innerHeight / 2, 120, 'confetti', 2);
@@ -1062,7 +1182,7 @@ async function victory() {
     face: '🏆',
     kicker: 'Last orders',
     title: 'You beat the pub!',
-    body: `<p>Every Landlord down. The machine is yours.</p>${statsHTML()}
+    body: `<p>Every Landlord down. The machine is yours.</p>${Tilly.aside('jackpot', Tilly.line('won'))}${statsHTML()}
       ${fresh ? `<p class="unlock-note">🔓 <b>${fresh.icon} ${fresh.name} stake unlocked:</b> ${fresh.rule}</p>` : ''}
       <p class="endless-pitch"><b>Fancy another?</b> Keep everything you've got and go round the Landlords again, with targets that keep climbing.</p>`,
     btn: 'Keep drinking 🍺',
@@ -1087,6 +1207,13 @@ function enterBar() {
   A.setMuffled(true);
   A.sfx.pour();
   showScreen('bar');
+  barBets();
+  {
+    const nx = info();
+    const bossRound = G.roundInfo(run, (nx.pint - 1) * 3 + 3);
+    if (bossRound.boss && bossRound.round === nx.round) setBarTilly('nervous', `${bossRound.boss.name} next. ${Tilly.bossLine(bossRound.boss.id)}`);
+    else setBarTilly('smug', Tilly.line('barHello'));
+  }
   renderBar();
   el.barScreen.querySelector('.bar-scroll').scrollTop = 0;
   const p = run.bar.pending;
@@ -1212,6 +1339,7 @@ function openRegularSheet(slot, where) {
         if (!btn.dataset.armed) { btn.dataset.armed = '1'; btn.textContent = 'Tap again to sell'; return; }
         const v = S.sell(run, slot);
         A.sfx.chaching();
+        barSay('sell', 'smug');
         toast(`${d.name} left the pub. +£${v}`);
         save(); closeSheet(); renderBar();
       },
@@ -1240,6 +1368,7 @@ function openItemSheet(kind, idx) {
   let status = reason;
   if (item.type === 'mat') status = status || `${SYMBOLS[item.id].name} is level ${(run.levels[item.id] || 0) + 1} now. Each level makes the next Mat £1 dearer.`;
   if (item.type === 'special') status = status || 'Permanent for the rest of the run.';
+  if (item.type === 'scratch' && item.id === 'wild' && !S.hasTarget(run, 'wild')) status = status || `Every reel already has ${S.MAX_WILDS} Wilds, the most a reel can take.`;
   if (item.type === 'packet' && item.id === 'prawn' && run.regulars.length >= maxRegulars(run)) status = status || 'Your machine is full: whoever you pick swaps in for one of your Regulars (sold at their usual price).';
   const extra = item.type === 'regular' ? lineupHTML() : '';
   openSheet({
@@ -1253,6 +1382,7 @@ function openItemSheet(kind, idx) {
 }
 
 function bought(text) {
+  setTimeout(barBets, 400);
   A.sfx.cash();
   A.buzz(15);
   bump(el.barMoney);
@@ -1264,6 +1394,11 @@ function bought(text) {
 function buyItem(kind, idx) {
   const item = barItem(kind, idx);
   if (item.type === 'scratch' && S.SCRATCH_BY_ID[item.id].target) {
+    if (!S.hasTarget(run, item.id)) {
+      A.sfx.denied();
+      toast(item.id === 'wild' ? `Every reel already has ${S.MAX_WILDS} Wilds.` : 'Nowhere to use that right now.', 2600);
+      return;
+    }
     // Choose the target first; only pay once it's applied.
     openPicker(item.id, (r, k) => {
       const res = S.buy(run, kind, idx);
@@ -1273,24 +1408,27 @@ function buyItem(kind, idx) {
     return;
   }
   const res = S.buy(run, kind, idx);
-  if (!res.ok) { A.sfx.denied(); toast(res.reason); return; }
-  if (res.packet) { bought(); openPacket(res.packet); return; }
-  if (res.dip) { A.sfx.scratch(); bought(res.dip.text); return; }
+  if (!res.ok) { A.sfx.denied(); toast(res.reason); if (res.reason === 'Not enough money') barSay('broke', 'defeated'); return; }
+  if (res.packet) { bought(); barSay('buyCrisps', 'jackpot'); openPacket(res.packet); return; }
+  if (res.dip) { A.sfx.scratch(); bought(res.dip.text); barSay('buyScratch', 'smug'); return; }
   if (res.special) {
     FX.flash('#ffe9a6', 350);
     FX.burstFrom(el.special, 30, 'coin', 1);
     A.sfx.clear();
     bought(`${S.SPECIAL_BY_ID[res.special].name} is yours for the rest of the run.`);
+    barSay('buySpecial', 'jackpot');
     return;
   }
   if (item.type === 'mat') {
     FX.burstFrom(el.levels, 20, 'coin', 0.8);
     bought(`${SYMBOLS[item.id].name} levelled up!`);
+    barSay('buyMat', 'smug');
     return;
   }
   FX.burstFrom(el.barRegs, 18, 'confetti', 0.8);
   A.sfx.cheers(0.25);
   bought(`${REG_BY_ID[item.id].name} joins you at the machine.`);
+  barSay('buyRegular', 'jackpot');
 }
 
 // ---------- Reel picker ----------
@@ -1314,7 +1452,7 @@ function openPicker(scratchId, onApply, onCancel = null) {
   el.pickerTitle.textContent = view ? 'Your reels' : 'Pick a symbol';
   el.pickerSub.textContent = view ? 'Every symbol on each reel strip. More copies means it lands more often.' : card.desc;
   el.pickerReels.innerHTML = run.reels.map((strip, r) =>
-    `<div class="picker-row"><div class="lbl">Reel ${r + 1} · ${strip.length} symbols</div><div class="chips">${
+    `<div class="picker-row"><div class="lbl">Reel ${r + 1} · ${strip.length} symbols${S.wildsOn(strip) ? ` · ⭐ ${S.wildsOn(strip)}/${S.MAX_WILDS}${S.wildsOn(strip) >= S.MAX_WILDS ? ' (full)' : ''}` : ''}</div><div class="chips">${
       strip.map((e, k) => chipHTML(e, r, k, view || S.canTarget(run, scratchId, r, k))).join('')}</div></div>`).join('');
   el.pickerCancel.textContent = view ? 'Close' : 'Cancel';
   pickerDone = onCancel;
@@ -1329,6 +1467,7 @@ function openPicker(scratchId, onApply, onCancel = null) {
       A.sfx.scratch();
       const verb = { gold: `Gilded a ${name}`, copy: `Copied a ${name}`, bin: `Binned a ${name}`, wild: `${name} turned Wild` }[scratchId];
       bought(`${verb} on reel ${r + 1}.`);
+      barSay('buyScratch', 'smug');
     }));
   }
   el.picker.classList.remove('hidden');
@@ -1444,7 +1583,7 @@ async function startRun(r, resumed = false) {
   setCalc(0, BASE_MULT);
   el.bar.classList.remove('on-fire');
   save();
-  if (!resumed) return roundIntro();
+  if (!resumed) { Bets.bump('runs'); return roundIntro(); }
 
   if (run.phase === 'bar') return enterBar();
   showScreen('game');
@@ -1461,15 +1600,6 @@ async function startRun(r, resumed = false) {
   say('Welcome back.');
 }
 
-const BLANK_LINES = [
-  'Nothing. Classic.',
-  'The machine laughs at you.',
-  'Not even a cherry.',
-  'Have you tried hitting it?',
-  'Blank. Lovely.',
-  'Your pint\'s getting warm.',
-  'Someone at the bar sniggers.',
-];
 function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
 
 // ---------- New runs & the machine picker ----------
@@ -1526,8 +1656,8 @@ async function firstTimeOffer() {
   if (seen) return false;
   try { localStorage.setItem(FIRST_KEY, '1'); } catch {}
   const choice = await showOverlay({
-    face: '🤵', kicker: 'First time in?', title: 'Fancy a quick tutorial?',
-    body: '<p>The Barman will talk you through your first spins, the Bar and your first Landlord. It\'s a normal run, just with tips.</p>',
+    kicker: 'First time in?', title: 'Fancy a quick tutorial?',
+    body: `${Tilly.aside('point', 'I\'m Tilly. I\'ll show you the ropes: your first spins, the Bar and your first Landlord. It\'s a normal run, just with tips.')}`,
     btn: 'Tutorial run', alt: 'Just play',
   });
   if (choice === 'alt') return false;
@@ -1567,6 +1697,7 @@ function openSettings() {
   el.optTips.checked = tipsOn();
   el.optShake.checked = !!settings.shake;
   $('drunk-seg').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.drunk === (settings.drunkFx || 'full')));
+  $('tilly-seg').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.tilly === (settings.tilly || 'full')));
   $('drunk-note').classList.toggle('hidden', !settings.reducedFx);
   el.speedSeg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', Number(b.dataset.speed) === speed()));
   el.versionLine.textContent = `Tilt v${VERSION}`;
@@ -1599,6 +1730,14 @@ function bindSettings() {
     settings = { ...settings, speed: Number(b.dataset.speed) };
     saveSettings(settings);
     el.speedSeg.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+    A.sfx.tick();
+  }));
+  $('tilly-seg').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
+    settings = { ...settings, tilly: b.dataset.tilly };
+    saveSettings(settings);
+    Tilly.setMode(settings.tilly);
+    titleTilly();
+    $('tilly-seg').querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
     A.sfx.tick();
   }));
   $('drunk-seg').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
@@ -1644,6 +1783,7 @@ function bindSettings() {
     closeSettings();
     [el.overlay, el.sheet, el.picker, el.packet, $('coach')].forEach((o) => o.classList.add('hidden'));
     document.body.className = settings.reducedFx ? 'reduced-fx' : '';
+    applyCosmetics();
     A.setBossMode(false);
     A.setMuffled(false);
     showScreen('title');
@@ -1767,6 +1907,13 @@ function boot() {
     newRunFlow();
   });
   bindAlbum();
+  bindBets();
+  Tilly.setMode(settings.tilly);
+  Tilly.preload();
+  titleTilly();
+  blinkLoop();
+  applyCosmetics();
+  document.getElementById('bets-btn').addEventListener('click', () => { A.unlock(); A.sfx.tick(); openBets(); });
   try { localStorage.removeItem('tilt.sfxmap.v1'); } catch {}   // old Sound test picks, no longer used
   el.albumBtn.addEventListener('click', () => { A.unlock(); openAlbum(); });
   el.bumpBtn.addEventListener('click', () => { A.unlock(); onBump(); });
@@ -1797,8 +1944,9 @@ function boot() {
 
   // Bar controls
   el.restock.addEventListener('click', () => {
-    if (!S.reroll(run)) { A.sfx.denied(); return; }
+    if (!S.reroll(run)) { A.sfx.denied(); barSay('broke', 'defeated'); return; }
     A.sfx.bell();
+    barSay('restock', 'smug');
     save();
     renderBar();
     el.stock.querySelectorAll('.item').forEach((n) => { n.style.animation = 'deal .4s cubic-bezier(.2,1.3,.4,1) both'; });

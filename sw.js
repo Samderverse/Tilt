@@ -1,11 +1,12 @@
 // Tilt service worker: network-first, so players always get the latest version when online,
 // with a cached copy to fall back on when offline.
-const CACHE = 'tilt-cache-v9';
+const CACHE = 'tilt-cache-v11';
 const CORE = [
   './', 'index.html', 'style.css', 'manifest.json',
   'js/main.js', 'js/game.js', 'js/scoring.js', 'js/symbols.js', 'js/reels.js', 'js/rng.js',
   'js/bosses.js', 'js/regulars.js', 'js/shop.js', 'js/machines.js', 'js/art.js', 'js/audio.js',
-  'js/fx.js', 'js/settings.js', 'js/howto.js', 'js/coach.js', 'js/album.js', 'js/version.js', 'js/scenery.js', 'js/sfxmap.js', 'js/drunk.js', 'js/stakes.js', 'js/changelog.js',
+  'js/fx.js', 'js/settings.js', 'js/howto.js', 'js/coach.js', 'js/album.js', 'js/version.js', 'js/scenery.js', 'js/sfxmap.js', 'js/drunk.js', 'js/stakes.js', 'js/changelog.js', 'js/bets.js', 'js/betsboard.js', 'js/tilly.js',
+  ...['smug', 'blink', 'point', 'nervous', 'tilt', 'defeated', 'jackpot'].flatMap((e) => [`img/tilly/${e}.webp`, `img/tilly/head-${e}.webp`]),
   'icons/icon-192.png', 'icons/apple-touch-icon.png', 'icons/favicon.svg',
 ];
 

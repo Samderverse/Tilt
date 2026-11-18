@@ -1587,3 +1587,157 @@ body.reduced-fx .bar-rumour.soon { animation: none; }
 .cashout-btn b { font-size: 16px; color: #b9ff9e; font-weight: 700; }
 .cashout-btn span { font-size: 11px; opacity: .8; }
 .cashout-btn.hidden { display: none; }
+
+/* ---------- v2.2: Bar Bets ---------- */
+.bets-panel {
+  position: relative; max-width: 440px; width: 100%;
+  max-height: calc(var(--app-h, 100vh) - 32px); display: flex; flex-direction: column;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,.05), transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(255,255,255,.04), transparent 45%),
+    #1f2b25;
+  border: 9px solid #6b4423; border-image: linear-gradient(135deg, #8a5a2e, #4a2c14, #8a5a2e) 1;
+  box-shadow: 0 12px 30px rgba(0,0,0,.7), inset 0 0 40px rgba(0,0,0,.5);
+}
+.bets-panel h2 { font-family: var(--font-chalk); font-weight: 400; color: #fffbe6; letter-spacing: .02em; }
+.bets-panel .panel-kicker { color: #cfe8d6; }
+.bets-count { text-align: center; margin: 2px 0 6px; }
+.bets-count b { color: #fffbe6; }
+.bets-body { overflow-y: auto; -webkit-overflow-scrolling: touch; min-height: 0; flex: 1; padding: 2px 2px 6px; }
+.bet-group { margin: 8px 0 12px; }
+.bet-group h3 { font-family: var(--font-chalk); font-weight: 400; font-size: 17px; color: #fff3c4; margin: 0 0 6px; display: flex; justify-content: space-between; align-items: baseline; }
+.bet-group h3 span { font-family: var(--font-body); font-size: 12px; opacity: .7; }
+.bet, .reward {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; margin-bottom: 6px; border-radius: 10px;
+  background: rgba(255,255,255,.04); border: 1px dashed rgba(255,255,255,.18); opacity: .78;
+}
+.bet.won, .reward.open { opacity: 1; background: rgba(255,224,102,.1); border: 1px solid rgba(255,224,102,.55); }
+.bet-icon { font-size: 24px; width: 34px; text-align: center; flex: 0 0 34px; line-height: 1; }
+.bet:not(.won) .bet-icon { filter: grayscale(1); opacity: .6; }
+.bet-text { display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 1.25; text-align: left; }
+.bet-text b { font-family: var(--font-chalk); font-weight: 400; font-size: 15px; color: #fffbe6; }
+.bet-text span { font-size: 12px; opacity: .8; }
+.bet-state { color: #ffe066; font-size: 20px; font-weight: 700; text-align: center; min-width: 40px; display: flex; flex-direction: column; line-height: 1; }
+.bet-state small { font-size: 9.5px; font-weight: 400; opacity: .75; margin-top: 3px; }
+.bets-note { font-size: 12px; opacity: .7; text-align: center; margin: 4px 0 10px; }
+.reward-bar { display: block; height: 5px; border-radius: 3px; background: rgba(255,255,255,.12); margin-top: 5px; overflow: hidden; }
+.reward-bar i { display: block; height: 100%; background: #ffe066; border-radius: 3px; }
+.switch { position: relative; width: 46px; height: 26px; flex: 0 0 46px; }
+.switch input { opacity: 0; width: 100%; height: 100%; position: absolute; inset: 0; margin: 0; cursor: pointer; z-index: 1; }
+.switch span { position: absolute; inset: 0; border-radius: 13px; background: rgba(255,255,255,.2); transition: background .2s; }
+.switch span::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .2s; }
+.switch input:checked + span { background: #ffc23d; }
+.switch input:checked + span::after { transform: translateX(20px); }
+.records { background: rgba(0,0,0,.2); border-radius: 10px; padding: 4px 12px; }
+.records .kv { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px dashed rgba(255,255,255,.15); font-size: 13.5px; }
+.records .kv:last-child { border: 0; }
+.records .kv b { color: #ffe066; font-weight: 500; text-align: right; }
+.records-sub { font-family: var(--font-chalk); font-weight: 400; font-size: 16px; color: #fff3c4; margin: 14px 0 6px; }
+
+/* Bet won banner */
+.bet-toast {
+  position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 12px); z-index: 120;
+  transform: translate(-50%, -140%); transition: transform .35s cubic-bezier(.2,1.4,.4,1);
+  display: flex; align-items: center; gap: 10px; padding: 9px 16px 9px 12px; border-radius: 14px; max-width: calc(100vw - 32px);
+  background: #1f2b25; border: 3px solid #8a5a2e; box-shadow: 0 10px 26px rgba(0,0,0,.6); color: #fffbe6; pointer-events: none;
+}
+.bet-toast.show { transform: translate(-50%, 0); }
+.bet-toast.reward { border-color: #ffc23d; box-shadow: 0 0 24px rgba(255,194,61,.6), 0 10px 26px rgba(0,0,0,.6); }
+.bet-toast .bt-icon { font-size: 28px; line-height: 1; }
+.bet-toast span:last-child { display: flex; flex-direction: column; line-height: 1.2; }
+.bet-toast small { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; opacity: .75; }
+.bet-toast b { font-family: var(--font-chalk); font-weight: 400; font-size: 18px; }
+
+/* ---------- Cosmetic rewards ---------- */
+/* Brass Trim */
+body.cos-trim .machine { box-shadow: 0 0 0 3px #e9b949, 0 0 0 5px #7a5410, inset 0 2px 0 rgba(255,255,255,.15), 0 10px 30px rgba(0,0,0,.6); }
+/* Foil Regulars */
+body.cos-foil #regulars .rc .rc-shine, body.cos-foil #bar-regulars .rc .rc-shine {
+  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.45) 48%, transparent 60%); background-size: 300% 100%;
+  animation: cos-shine 3.6s ease-in-out infinite;
+}
+@keyframes cos-shine { 0%, 70% { background-position: 140% 0; } 100% { background-position: -40% 0; } }
+/* Neon Sign */
+body.cos-neon #marquee-text { animation: cos-neon 6s linear infinite; }
+@keyframes cos-neon { to { filter: hue-rotate(360deg); } }
+/* Golden Reels */
+body.cos-goldreels .reels { box-shadow: 0 0 0 3px #ffd75e, 0 0 0 6px #a8740f, 0 0 18px rgba(255,215,94,.55); }
+/* Hall of Fame */
+body.cos-crown #title-screen .logo { position: relative; }
+body.cos-crown #title-screen .logo::before { content: '👑'; position: absolute; left: 50%; top: -.55em; transform: translateX(-50%) rotate(-8deg); font-size: .42em; filter: drop-shadow(0 4px 6px rgba(0,0,0,.5)); }
+/* Landlord of the Year */
+body.cos-legend #title-screen .logo { color: #ffd75e; text-shadow: 0 3px 0 #8a5a0a, 0 0 28px rgba(255,215,94,.8); -webkit-text-fill-color: #ffd75e; }
+body.reduced-fx.cos-foil .rc-shine, body.reduced-fx.cos-neon #marquee-text { animation: none; }
+
+/* ---------- v2.3: Tilly ---------- */
+.tilly, .tilly-head { image-rendering: auto; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; pointer-events: none; }
+.tilly-bubble {
+  position: relative; margin: 0; padding: 9px 12px; border-radius: 14px; max-width: 210px;
+  background: #fff6e2; color: #3a1408; font-weight: 700; font-size: 14px; line-height: 1.3; text-align: left;
+  box-shadow: 0 4px 0 rgba(0,0,0,.35);
+}
+.tilly-bubble::before {
+  content: ''; position: absolute; left: -9px; top: 50%; transform: translateY(-50%);
+  border: 9px solid transparent; border-left: 0; border-right-color: #fff6e2;
+}
+.tilly-bubble.pop { animation: tilly-bubble .35s cubic-bezier(.2,1.4,.4,1); }
+@keyframes tilly-bubble { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* Title host */
+.title-tilly { display: flex; align-items: center; justify-content: center; gap: 12px; margin: -4px 0 2px; }
+.title-tilly.hidden { display: none; }
+.tilly-title { height: clamp(96px, calc(var(--app-h, 100vh) * .2), 190px); width: auto; filter: drop-shadow(0 6px 10px rgba(0,0,0,.5)); }
+
+/* In the Bar */
+.bar-tilly { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; }
+.bar-tilly.hidden { display: none; }
+.bar-tilly .tilly { height: 92px; width: auto; flex: 0 0 auto; filter: drop-shadow(0 4px 6px rgba(0,0,0,.5)); }
+.bar-tilly .tilly-bubble { max-width: none; flex: 1; font-size: 13.5px; }
+
+/* "Tilly says" inside overlays */
+.tilly-aside { display: flex; align-items: center; gap: 10px; margin: 10px auto 4px; max-width: 320px; }
+.tilly-aside-img { height: 78px; width: auto; flex: 0 0 auto; filter: drop-shadow(0 4px 6px rgba(0,0,0,.5)); }
+.tilly-says {
+  position: relative; margin: 0; padding: 8px 11px; border-radius: 12px; flex: 1; text-align: left;
+  background: #fff6e2; color: #3a1408; font-weight: 700; font-size: 13.5px; line-height: 1.3;
+}
+.tilly-says::before { content: ''; position: absolute; left: -8px; top: 50%; transform: translateY(-50%); border: 8px solid transparent; border-left: 0; border-right-color: #fff6e2; }
+
+/* Message line with Tilly's head */
+.message.with-tilly { gap: 6px; }
+.message .msg-tilly { height: 2.3rem; width: auto; flex: 0 0 auto; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
+.message.with-tilly span { text-align: left; }
+
+/* Tutorial tips: Tilly instead of the Barman */
+.coach-who img.coach-face { height: 40px; width: auto; vertical-align: middle; }
+
+/* How to Play host */
+.howto-panel { position: relative; }
+.ht-tilly { position: absolute; left: 10px; top: 4px; height: 64px; width: auto; filter: drop-shadow(0 3px 5px rgba(0,0,0,.5)); pointer-events: none; }
+
+/* Pop-up for the moments that pause play: TILT! and Landlord beaten */
+.tilly-pop {
+  position: fixed; left: 2px; bottom: calc(var(--app-h, 100vh) * .27); z-index: 40; pointer-events: none;
+  height: min(calc(var(--app-h, 100vh) * .22), 180px); width: auto;
+  transform: translateX(-60%) rotate(-12deg); opacity: 0; filter: drop-shadow(0 10px 16px rgba(0,0,0,.6));
+}
+.tilly-pop.hidden { display: none; }
+.tilly-pop.show { animation: tilly-pop 1.5s cubic-bezier(.2,1.4,.4,1) forwards; }
+@keyframes tilly-pop {
+  0% { transform: translateX(-80%) rotate(-20deg); opacity: 0; }
+  18% { transform: translateX(0) rotate(6deg); opacity: 1; }
+  30% { transform: translateX(0) rotate(-4deg); }
+  80% { transform: translateX(0) rotate(3deg); opacity: 1; }
+  100% { transform: translateX(-80%) rotate(-12deg); opacity: 0; }
+}
+
+/* Tilly gets drunk too: rosier from Merry, swaying from Tipsy, wonky from Hammered, doubled when Seeing double */
+body[data-drunk="1"] :is(.tilly-title, .bar-tilly .tilly, .tilly-aside-img) { filter: saturate(1.15) drop-shadow(0 6px 10px rgba(0,0,0,.5)); }
+body[data-drunk="2"] :is(.tilly-title, .bar-tilly .tilly, .tilly-aside-img) { filter: saturate(1.3) hue-rotate(-8deg) drop-shadow(0 6px 10px rgba(0,0,0,.5)); animation: tilly-sway 3.6s ease-in-out infinite; }
+body[data-drunk="3"] :is(.tilly-title, .bar-tilly .tilly, .tilly-aside-img) { filter: saturate(1.4) hue-rotate(-12deg) drop-shadow(0 6px 10px rgba(0,0,0,.5)); animation: tilly-wonky 2.8s ease-in-out infinite; }
+body[data-drunk="4"] :is(.tilly-title, .bar-tilly .tilly, .tilly-aside-img) { filter: saturate(1.5) hue-rotate(-14deg) drop-shadow(7px 0 0 rgba(255,190,110,.35)) drop-shadow(0 6px 10px rgba(0,0,0,.5)); animation: tilly-wonky 2.2s ease-in-out infinite; }
+@keyframes tilly-sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2.5deg); } }
+@keyframes tilly-wonky { 0%, 100% { transform: rotate(-7deg) translateX(-2px); } 50% { transform: rotate(4deg) translateX(3px); } }
+body.reduced-fx :is(.tilly-title, .bar-tilly .tilly, .tilly-aside-img, .tilly-bubble), body.reduced-fx .tilly-pop.show { animation: none !important; }
+body.reduced-fx .tilly-pop.show { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { :is(.tilly-title, .bar-tilly .tilly, .tilly-aside-img) { animation: none !important; } }

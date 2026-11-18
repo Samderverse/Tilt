@@ -9,7 +9,7 @@ export const SYMBOLS = {
   bell:   { id: 'bell',   icon: '🔔', name: 'Bell',   coins: 30,  mult: 2 },
   bar:    { id: 'bar',    icon: 'BAR', name: 'Bar',   coins: 40,  mult: 2, text: true },
   seven:  { id: 'seven',  icon: '7',   name: 'Seven', coins: 60, mult: 3, text: true },
-  wild:   { id: 'wild',   icon: '⭐',  name: 'Wild',  coins: 25,  mult: 2 },
+  wild:   { id: 'wild',   icon: '⭐',  name: 'Wild',  coins: 10,  mult: 2 },
 };
 
 // Symbols that appear naturally (wilds only come from Scratchcards).

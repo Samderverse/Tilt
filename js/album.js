@@ -19,6 +19,7 @@ function mark(group, id, level) {
 
 // 1 = seen, 2 = owned / beaten
 export const seeRegular = (id) => mark('regs', id, 1);
+export const albumData = () => data;
 export const ownRegular = (id) => mark('regs', id, 2);
 export const faceBoss = (id) => mark('bosses', id, 1);
 export const beatBoss = (id) => { data.wins[id] = (data.wins[id] || 0) + 1; mark('bosses', id, 2); persist(); };

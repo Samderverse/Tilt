@@ -31,12 +31,17 @@
     <section id="title-screen" class="screen active">
       <h1 class="logo">TILT</h1>
       <p class="tagline">The machine always wins. Probably.</p>
+      <div class="title-tilly" id="title-tilly">
+        <img class="tilly tilly-title" id="title-tilly-img" src="img/tilly/smug.webp" alt="Tilly" draggable="false">
+        <p class="tilly-bubble" id="title-tilly-line">Go on then. One more won't hurt.</p>
+      </div>
       <button id="start-btn" class="big-btn">Tap to Play</button>
       <button id="new-run-btn" class="link-btn hidden">Start a new run</button>
       <div class="title-menu">
         <button class="menu-btn" id="howto-btn">📖 How to Play</button>
         <button class="menu-btn" id="tutorial-btn">🎓 Tutorial run</button>
         <button class="menu-btn" id="album-btn">📚 Album</button>
+        <button class="menu-btn" id="bets-btn">🍻 Bar Bets</button>
       </div>
       <p class="best" id="best-line"></p>
       <p class="sound-hint">🔊 Best with sound on</p>
@@ -169,6 +174,10 @@
       </div>
 
       <div class="bar-scroll">
+        <div class="bar-tilly" id="bar-tilly">
+          <img class="tilly" id="bar-tilly-img" src="img/tilly/smug.webp" alt="Tilly" draggable="false">
+          <p class="tilly-bubble" id="bar-tilly-line"></p>
+        </div>
         <div class="bar-rumour" id="bar-rumour"></div>
         <button class="cashout-btn hidden" id="cashout-btn"></button>
         <div class="bar-section-head">
@@ -245,6 +254,7 @@
     <div id="howto" class="overlay hidden">
       <div class="panel howto-panel" id="ht-card">
         <button class="ht-x" id="ht-close" aria-label="Close">✕</button>
+        <img class="ht-tilly" src="img/tilly/point.webp" alt="" draggable="false">
         <p class="panel-kicker">How to Play</p>
         <div class="ht-art" id="ht-art"></div>
         <h2 id="ht-title"></h2>
@@ -258,10 +268,11 @@
     </div>
 
     <!-- Coach tips (tutorial) -->
+    <img id="tilly-pop" class="tilly-pop hidden" alt="" draggable="false">
     <div id="coach" class="hidden" aria-live="polite">
       <div class="coach-spot"></div>
       <div class="coach-bubble">
-        <div class="coach-who"><span class="coach-face">🧔‍♂️</span><b>The Barman</b></div>
+        <div class="coach-who"><img class="coach-face tilly-head" src="img/tilly/head-point.webp" alt="" draggable="false"><b>Tilly</b></div>
         <p class="coach-text"></p>
         <div class="coach-actions">
           <button class="link-btn coach-skip">Skip tips</button>
@@ -295,6 +306,18 @@
       </div>
     </div>
 
+    <!-- Bar Bets -->
+    <div id="bets" class="overlay hidden">
+      <div class="panel bets-panel">
+        <button class="ht-x" id="bets-close" aria-label="Close">✕</button>
+        <p class="panel-kicker">On the chalkboard</p>
+        <h2>Bar Bets</h2>
+        <div class="album-tabs"><button class="tab on" data-tab="bets">Bets</button><button class="tab" data-tab="rewards">Rewards</button><button class="tab" data-tab="records">Records</button></div>
+        <p class="muted bets-count" id="bets-count"></p>
+        <div id="bets-body" class="bets-body"></div>
+      </div>
+    </div>
+
     <!-- Settings -->
     <div id="settings" class="overlay hidden">
       <div class="panel settings-panel">
@@ -304,11 +327,14 @@
         <label class="slider"><span>Sound effects</span><input type="range" min="0" max="1" step="0.05" id="vol-sfx"></label>
         <label class="toggle"><span>Reduced effects</span><input type="checkbox" id="opt-reduced"></label>
         <label class="toggle"><span>Vibration</span><input type="checkbox" id="opt-vibration"></label>
-        <label class="toggle"><span>Barman's tips</span><input type="checkbox" id="opt-tips"></label>
+        <label class="toggle"><span>Tilly's tips</span><input type="checkbox" id="opt-tips"></label>
         <div class="slider speed-row"><span>Game speed</span>
           <div class="seg" id="speed-seg"><button data-speed="1">1×</button><button data-speed="2">2×</button><button data-speed="4">4×</button></div>
         </div>
         <label class="toggle"><span>Shake phone to bump</span><input type="checkbox" id="opt-shake"></label>
+        <div class="slider speed-row"><span>Tilly's chat</span>
+          <div class="seg" id="tilly-seg"><button data-tilly="full">Full</button><button data-tilly="quiet">Quiet</button><button data-tilly="off">Off</button></div>
+        </div>
         <div class="slider speed-row"><span>Drunk effects</span>
           <div class="seg" id="drunk-seg"><button data-drunk="full">Full</button><button data-drunk="light">Light</button><button data-drunk="off">Off</button></div>
         </div>

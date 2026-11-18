@@ -7,6 +7,7 @@ import { runHook, aliasesFor, extrasFor } from './regulars.js';
 import { openBar, hasSpecial } from './shop.js';
 import { MACHINE_BY_ID, machineOf, stripFor } from './machines.js';
 import { stakeMods } from './stakes.js';
+import { mark, newTrack } from './bets.js';
 
 export const CONFIG = {
   spins: 6,
@@ -82,6 +83,7 @@ export function newRun(seed, machineId = 'local', stake = 1) {
     stops: [0, 0, 0],
     bar: null,
     stats: { bestSpin: 0, totalSpins: 0, bossesBeaten: 0, binned: 0, tilts: 0 },
+    track: newTrack(),
   };
   startRound(run);
   return run;
@@ -113,6 +115,7 @@ export function startRound(run) {
   run.spinsThisRound = 0;
   run.bumpsThisRound = 0;
   run.bumpsThisSpin = 0;
+  run.tiltsThisRound = 0;
   run.tilted = false;
   return info;
 }
@@ -133,6 +136,7 @@ export function toggleHold(run, i) {
   if (!canHold(run, i)) return false;
   run.held[i] = !run.held[i];
   run.holdsLeft += run.held[i] ? -1 : 1;
+  if (run.held[i]) mark(run, 'held');
   return true;
 }
 
@@ -201,8 +205,10 @@ export function bump(run) {
   const chance = tiltChance(run);
   run.bumpsThisRound++;
   run.bumpsThisSpin++;
+  mark(run, 'bumped');
   if (rng.next() < chance) {
     run.tilted = true;
+    run.tiltsThisRound = (run.tiltsThisRound || 0) + 1;
     run.stats.tilts = (run.stats.tilts || 0) + 1;
     return { tilted: true, chance };
   }
@@ -228,6 +234,7 @@ export function nudge(run, i, dir) {
   const n = run.reels[i].length;
   run.stops[i] = (run.stops[i] - dir + n) % n;
   run.nudgesLeft--;
+  mark(run, 'nudged');
   runHook(activeRegs(run), 'nudge', { run });
   return true;
 }

@@ -22,6 +22,10 @@ const { CREDITS, DEFAULTS } = await import(join(ROOT, 'js/settings.js'));
 const { PAGES } = await import(join(ROOT, 'js/howto.js'));
 const { STAKES, stakeMods } = await import(join(ROOT, 'js/stakes.js'));
 const { CHANGELOG } = await import(join(ROOT, 'js/changelog.js'));
+const { BETS, GROUPS, REWARDS } = await import(join(ROOT, 'js/bets.js'));
+const { MAX_WILDS } = await import(join(ROOT, 'js/shop.js'));
+const Tilly = await import(join(ROOT, 'js/tilly.js'));
+const tillyImg = (e) => 'data:image/webp;base64,' + readFileSync(join(ROOT, `img/tilly/${e}.webp`)).toString('base64');
 
 // One line per file, so the Code tab says what each part of the game is for.
 const FILE_NOTES = {
@@ -53,6 +57,9 @@ const FILE_NOTES = {
   'js/version.js': 'The version the game reports',
   'js/stakes.js': 'Stakes: difficulty tiers and their unlock progress',
   'js/changelog.js': 'What\'s new notes, shown once per version',
+  'js/bets.js': 'Bar Bets: the bets, run tracking, career records and reward tiers',
+  'js/betsboard.js': 'The Bar Bets chalkboard screen and the cosmetic rewards',
+  'js/tilly.js': 'Tilly the mascot: expressions, every line of dialogue, chat modes',
 };
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -459,6 +466,8 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:30px 16px}
       <button class="tab" data-tab="machines">Machines ${counts.machines}</button>
       <button class="tab" data-tab="sounds">Sound ${counts.sounds}</button>
       <button class="tab" data-tab="stakes">Stakes ${STAKES.length}</button>
+      <button class="tab" data-tab="tillyTab">Tilly</button>
+      <button class="tab" data-tab="betsTab">Bar Bets ${BETS.length}</button>
       <button class="tab" data-tab="balance">Balance</button>
       <button class="tab" data-tab="changelog">What's new</button>
       <button class="tab" data-tab="code">Code</button>
@@ -553,7 +562,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:30px 16px}
       <p style="font-size:13.5px;margin:0">Every spin starts at <b>×${BASE_MULT} Multi</b>. Each of the ${LINES.length} lines is checked: <b>3 in a row</b> pays the symbols' Coins added up and sets that line's Multi; <b>2 matching from the left</b> pays 2× the symbol's Coins. Only the <b>best line's Multi</b> counts; every other winning line still adds its Coins. Then Regulars fire left to right, and the total is Coins × Multi.</p>
     </div>
     <div class="box"><h3>Gold &amp; Wilds</h3>
-      <p style="font-size:13.5px;margin:0">Gold symbols (Gold Leaf scratchcard) score <b>double Coins</b> and stay lit in a Power Cut. Wilds (Wild Card scratchcard, or the High Roller machine) match anything and are worth ${SYMBOLS.wild.coins} Coins / ×${SYMBOLS.wild.mult}. A reel strip holds ${S.MIN_STRIP}–${S.MAX_STRIP} symbols.</p>
+      <p style="font-size:13.5px;margin:0">Gold symbols (Gold Leaf scratchcard) score <b>double Coins</b> and stay lit in a Power Cut. Wilds (Wild Card scratchcard, or the High Roller machine) match anything and are worth ${SYMBOLS.wild.coins} Coins / ×${SYMBOLS.wild.mult}, with at most ${MAX_WILDS} per reel. A reel strip holds ${S.MIN_STRIP}–${S.MAX_STRIP} symbols.</p>
     </div>
   </div>
 </section>
@@ -620,6 +629,24 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:30px 16px}
     }).join('')}</tbody>
   </table></div>
   <p class="muted" style="font-size:12.5px">Progress is saved per phone in <code>tilt.stakes.v1</code>: the highest stake unlocked, and the best stake beaten on each machine.</p>
+</section>
+
+<!-- TILLY -->
+<section class="panel" id="tillyTab">
+  <div class="section-head"><h2>Tilly</h2><span class="count">${Tilly.EXPRESSIONS.length} expressions · every line in js/tilly.js</span></div>
+  <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr))">${Tilly.EXPRESSIONS.map((e) => `<div class="card" style="text-align:center" data-search="tilly ${e}"><img src="${tillyImg(e)}" alt="${e}" style="height:150px;width:auto"><br><code>${e}</code></div>`).join('')}</div>
+  <div class="two" style="margin-top:14px">${Object.entries(Tilly.LINES).map(([k, list]) => `<div class="box" data-search="${esc((k + ' ' + list.join(' ')).toLowerCase())}"><h3><code>${k}</code></h3>${list.map((l) => `<div class="kv"><span>“${esc(l)}”</span></div>`).join('')}</div>`).join('')}
+    <div class="box" data-search="landlord ${esc(Object.values(Tilly.BOSS_LINES).join(' ').toLowerCase())}"><h3>Landlord intros</h3>${BOSSES.map((b) => `<div class="kv"><span>${b.face} ${esc(b.name)}</span><b style="font-weight:400;color:var(--cream)">“${esc(Tilly.bossLine(b.id))}”</b></div>`).join('')}</div>
+  </div>
+</section>
+
+<!-- BAR BETS -->
+<section class="panel" id="betsTab">
+  <div class="section-head"><h2>Bar Bets</h2><span class="count">${BETS.length} bets · a cosmetic reward every 5</span></div>
+  <div class="two">${GROUPS.map((g) => `<div class="box"><h3>${g.icon} ${esc(g.name)}</h3>${BETS.filter((b) => b.group === g.id).map((b) => `<div class="kv" data-search="${esc((b.name + ' ' + b.desc + ' ' + b.id).toLowerCase())}"><span>${b.icon} <b style="color:var(--cream)">${esc(b.name)}</b><br><span class="muted" style="font-size:12px">${esc(b.desc)}</span></span><b><code>${b.on}</code></b></div>`).join('')}</div>`).join('')}
+    <div class="box"><h3>🎁 Rewards</h3>${REWARDS.map((r) => `<div class="kv" data-search="${esc((r.name + ' ' + r.desc).toLowerCase())}"><span>${r.icon} ${esc(r.name)}<br><span class="muted" style="font-size:12px">${esc(r.desc)}</span></span><b>${r.at} bets</b></div>`).join('')}</div>
+  </div>
+  <p class="muted" style="font-size:12.5px">The code column says when each bet is checked: after a scoring spin, when a round is cleared, on entering the Bar, on beating the pub, or on cashing out. Stored in <code>tilt.bets.v1</code>; career records in <code>tilt.career.v1</code>.</p>
 </section>
 
 <!-- CHANGELOG -->

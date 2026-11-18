@@ -14,6 +14,7 @@ A chaotic pub fruit machine roguelike by Samderverse. Spin, hold, nudge and surv
 - **Bump**: after a spin, jolt every reel up or down at random. Free, but each bump raises the round's **tilt** risk (10%, 30%, 50%...). Tilt and that spin scores nothing. Can also shake the phone (Settings).
 - Earn £ each round: round reward + £1 per spare spin (max £3) + interest (£1 per £5 held, max £3).
 - Beat Pint 8's Landlord to win the run, then keep everything and carry on in **Endless** mode (targets grow ×1.75 per Pint).
+- **Wilds** match anything but are capped at 3 per reel (Wild Card and Photocopier respect the cap).
 - **Cash Out** (Endless only): once you're holding £100, a button in the Bar ends the run and banks your pot. Best cash-out shows on the title screen (`tilt.cashout.v1`).
 
 ## Stakes
@@ -80,7 +81,6 @@ Open the GitHub Pages link, then:
 
 ## Landlords
 16 in total. Each run gets 4 from the early pool for Pints 1–4 and 4 from the late pool for Pints 5–8; endless brings in the rest.
-- The Bouncer lets the down diagonal in during Endless (4 lines), since late builds lean on per-line Regulars.
 - Early: The Bouncer, Health Inspector, Last Orders, The Quiz Master, Sticky Floors, Bolted Down, Running a Tab, Jammed Reel
 - Late: Power Cut, The Taxman, Drunk Uncle, Half Measures, Darts Night, Smoke Machine, Members Only, Watered Down
 
@@ -110,6 +110,28 @@ The more Pints you've had, the wobblier the pub gets:
 - The reels, numbers and buttons never blur; effects settle while you nudge, just after any tap, and in the Bar.
 - Settings → **Drunk effects**: Full / Light / Off. Always off with **Reduced effects** or the phone's reduce-motion setting.
 - Test with `?drunk=0..4`.
+
+## Tilly
+The game's mascot: a smug pint of lager in a burgundy waistcoat (art in `img/tilly/`, 7 expressions:
+smug, blink, point, nervous, tilt, defeated, jackpot, plus head crops for the message line).
+- **Title screen**: Tilly with a rotating one-liner, blinking now and then.
+- **In play**: Tilly's head and a line on the message strip for blank spins, big spins, nudging into a win and risky bumps
+  (with a cooldown so it never comments on every spin). Pops in on TILT! and when a Landlord is beaten.
+- **Overlays**: a "Tilly says" aside on the Landlord intro (a line per Landlord), first round, round cleared, game over,
+  beating the pub and cashing out.
+- **The Bar**: Tilly in the corner reacting to purchases, sells, restocks and being skint; nervous when a Landlord is next.
+- **Tutorial**: Tilly replaces the Barman as the voice of the tips and the first-time offer.
+- **Drunk**: rosier from Merry, sways from Tipsy, goes wonky from Hammered, double vision when Seeing double. Off with Reduced effects.
+- Settings → **Tilly's chat**: Full / Quiet (big moments only) / Off. All dialogue lives in `js/tilly.js`.
+
+## Bar Bets
+35 career-long challenges on a chalkboard (title screen → 🍻 Bar Bets), in six groups: The Reels (land nine of a symbol),
+Hands Tied (beat the pub without nudging/holding/bumping/Beer Mats/Regulars), Landlords, Long Nights, Pub Crawl and Regulars.
+- A "Bet won" banner drops in when one is won. Runs from before v2.2 can't win the "without..." bets.
+- Every 5 bets unlocks a cosmetic, each switchable in the Rewards tab: Brass Trim, Foil Regulars, Neon Sign, Golden Reels,
+  Champagne Moment, Hall of Fame (crown + Bar Bets count on shared runs), Landlord of the Year (all 35: gold TILT sign).
+- Records tab: runs, pubs and Landlords beaten, spins, best spin, deepest Pint, best cash-out, tilts, best stake per machine.
+- Stored in `tilt.bets.v1` and `tilt.career.v1`; definitions in `js/bets.js`, screen in `js/betsboard.js`.
 
 ## Extras
 - **Album**: every Regular you've seen or recruited, and every Landlord you've faced or beaten, with a win/loss record per Landlord and your nemesis marked.
@@ -172,6 +194,7 @@ under the same version number so the "What's new" screen shows them; bump the ca
 - `js/sfxmap.js`: sound effect mapping
 - `js/drunk.js`: drunk effects
 - `js/album.js`: the Album
+- `js/tilly.js`, `img/tilly/`: Tilly the mascot
 - `js/version.js`, `version.json`, `sw.js`: update notice and offline play
 - `icons/`, `manifest.json`: app icon and home-screen install
 
@@ -194,3 +217,5 @@ game loads it, and `tools/` can be deleted before uploading if you'd rather not 
 - v1.10: Regular swap from crisps, Long-Haul Luke, SKIP, bug report, Album records, 11 new sounds ✅
 - v2.0: Stakes, Landlord in the Bar, drag to reorder, line-up in shop cards, pace hint, What's new ✅
 - v2.1: Regular odds fix, premium Prawn Cocktail, Endless Bouncer, Cash Out ✅
+- v2.2: Bar Bets, cosmetic rewards, Records, wild cap, Bouncer back to full strength ✅
+- v2.3: Tilly the mascot ✅

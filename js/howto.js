@@ -44,7 +44,7 @@ export const PAGES = [
   {
     title: 'Stakes',
     art: `<div class="ht-stakes"><span>🍋</span><span>🍺</span><span>🍂</span><span>🏅</span><span>💪</span><span>🚢</span></div>`,
-    body: 'Beaten the pub? Pick a higher <b>stake</b> next time. Each one adds a permanent rule on top of the last: no pay for spare spins, dearer Bar, fewer Regular slots, bigger targets, fewer spins. Beat the pub on a stake to unlock the next.',
+    body: 'Beaten the pub? Pick a higher <b>stake</b> next time. Each one adds a permanent rule on top of the last: no pay for spare spins, dearer Bar, fewer Regular slots, bigger targets, fewer spins. Beat the pub on a stake to unlock the next. Fancy a challenge? Check the <b>Bar Bets</b> on the title screen.',
   },
   {
     title: 'The Bar',
